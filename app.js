@@ -10,12 +10,18 @@ const username = user.username || user.first_name || "user";
 const $ = (s)=>document.querySelector(s);
 
 async function post(path, data){
-  const r = await fetch(`${API_BASE}${path}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({...data, initData: tg.initData})
-  });
-  return r.json();
+  try{
+    const r = await fetch(`${API_BASE}${path}`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({...data, initData: tg.initData})
+    });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }catch(e){
+    console.error(e);
+    return {ok:false};
+  }
 }
 
 // навигация и показ экранов
@@ -40,7 +46,7 @@ document.querySelectorAll(".back").forEach(b=> b.onclick=()=>show("menu"));
 // статистика
 async function loadStats(){
   const j = await post("/stats",{user_id});
-  const s = j.stats || {};
+  const s = (j && j.stats) || {};
   $("#statsBox").textContent =
 `Пользователь: ${s.username || username}
 ID: ${user_id}
@@ -105,3 +111,4 @@ $("#sendCode").onclick = async ()=>{
 
 // стартовый экран
 show("menu");
+
