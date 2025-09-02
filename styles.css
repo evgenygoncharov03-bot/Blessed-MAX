@@ -1,0 +1,11 @@
+:root { --tg-bg:#0b0f15; --tg-text:#eaf1fb; }
+*{box-sizing:border-box} html,body{height:100%;margin:0}
+body{background:var(--tg-bg);color:var(--tg-text);font:15px/1.4 system-ui,Segoe UI,Roboto,Arial}
+.app{max-width:420px;margin:0 auto;padding:16px 14px}
+h1{font-size:18px;margin:0 0 12px}
+label{display:block;margin:10px 0}
+input,select,button{
+  width:100%;padding:10px 12px;border-radius:10px;border:1px solid #223244;background:#111826;color:var(--tg-text)
+}
+button{margin-top:12px;border:0;background:#2b88ff;color:#fff;cursor:pointer}
+button:active{transform:scale(.99)}
