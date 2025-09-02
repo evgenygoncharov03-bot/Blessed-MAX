@@ -4,11 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Blessed MAX</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div id="app" class="app">
+
+    <!-- Главное меню + LOG CHAT -->
     <div id="menu" class="card">
       <h1>Главное меню</h1>
       <div class="grid" style="margin-bottom:12px">
@@ -27,30 +29,38 @@
       </div>
     </div>
 
-    <div id="screen-stats" class="card hidden">
+    <!-- Статистика -->
+    <div id="screen-stats" class="card hidden" aria-hidden="true">
       <h2>Статистика</h2>
       <pre id="statsBox">Загрузка…</pre>
       <button class="back">Назад</button>
     </div>
 
-    <div id="screen-submit" class="card hidden">
+    <!-- Сдать MAX -->
+    <div id="screen-submit" class="card hidden" aria-hidden="true">
       <h2>Сдать MAX</h2>
       <label>Номер телефона
-        <input id="phone" placeholder="+7..." />
+        <input id="phone" inputmode="tel" autocomplete="tel" placeholder="+7..." />
       </label>
       <button id="sendPhone">Отправить</button>
-      <div id="codePanel" class="hidden">
+
+      <div id="codePanel" class="hidden" aria-hidden="true">
         <label>Код из SMS
-          <input id="code" placeholder="123456" />
+          <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
         </label>
         <button id="sendCode">Отправить код</button>
       </div>
+
       <button class="back">Назад</button>
     </div>
 
-    <div id="todo" class="card hidden"><h2>Скоро</h2><button class="back">Назад</button></div>
+    <!-- Заглушка -->
+    <div id="todo" class="card hidden" aria-hidden="true">
+      <h2>Скоро</h2>
+      <button class="back">Назад</button>
+    </div>
+
   </div>
-  <!-- ОДНО подключение скрипта, внизу -->
-  <script src="./app.js?v=R1004"></script>
+  <script src="./app.js?v=R2001"></script>
 </body>
 </html>
