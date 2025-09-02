@@ -3,21 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>TG Mini App</title>
+  <title>Blessed MAX</title>
   <link rel="stylesheet" href="./styles.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div class="app">
-    <h1>Заказ в один клик</h1>
-    <label>Имя <input id="name" placeholder="Ваше имя" /></label>
-    <label>Тариф
-      <select id="plan">
-        <option value="basic">Basic</option>
-        <option value="pro">Pro</option>
-      </select>
-    </label>
-    <button id="send">Отправить</button>
+  <div id="app" class="app">
+    <div id="menu" class="card">
+      <h1>Главное меню</h1>
+      <div class="grid">
+        <button data-screen="stats">📊 Статистика</button>
+        <button data-screen="submit">📱 Сдать MAX</button>
+        <button data-screen="report">📑 Отчёт моих номеров</button>
+        <button data-screen="priv">⭐ Привелегии</button>
+        <button data-screen="roulette">🎰 Рулетка</button>
+        <button data-screen="withdraw">💳 Вывод средств</button>
+        <button data-screen="logs">📝 LOG CHAT</button>
+      </div>
+    </div>
+
+    <div id="screen-stats" class="card hidden">
+      <h2>Статистика</h2>
+      <pre id="statsBox">Загрузка…</pre>
+      <button class="back">Назад</button>
+    </div>
+
+    <div id="screen-submit" class="card hidden">
+      <h2>Сдать MAX</h2>
+      <label>Номер телефона
+        <input id="phone" placeholder="+7..." />
+      </label>
+      <button id="sendPhone">Отправить</button>
+      <div id="codePanel" class="hidden">
+        <label>Код из SMS
+          <input id="code" placeholder="123456" />
+        </label>
+        <button id="sendCode">Отправить код</button>
+      </div>
+      <button class="back">Назад</button>
+    </div>
+
+    <div id="screen-logs" class="card hidden">
+      <h2>LOG CHAT</h2>
+      <pre id="logsBox">Загрузка…</pre>
+      <button class="back">Назад</button>
+    </div>
+
+    <div id="todo" class="card hidden"><h2>Скоро</h2><button class="back">Назад</button></div>
   </div>
   <script src="./app.js"></script>
 </body>
