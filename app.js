@@ -47,6 +47,7 @@ document.querySelectorAll("#menu button[data-screen]").forEach(b=>{
     const sc = b.getAttribute("data-screen");
     if(sc==="stats"){ loadStats(); show("screen-stats"); return; }
     if(sc==="submit"){ show("screen-submit"); return; }
+    if(sc==="roulette"){ initRoulette(); show("screen-roulette"); return; } // NEW
     show("todo");
   };
 });
@@ -70,7 +71,7 @@ ID: ${user_id ?? "—"}
 }
 
 /* ---------- LOG CHAT ---------- */
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])) }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;","~":"&gt;","\"":"&quot;","'":"&#39;" }[m])) }
 async function loadLogs(){
   const j = await post("/logs",{user_id});
   const list = (j && j.events) || [];
@@ -127,6 +128,55 @@ $("#sendCode").onclick = async ()=>{
     show("menu");
   } else alert("Ошибка отправки кода");
 };
+
+/* ---------- Рулетка ---------- */
+const ringIdx = [0,1,2,5,8,7,6,3];
+function fillGrid(values){
+  const cells = [...document.querySelectorAll("#ru-grid .ru-cell")];
+  for(let i=0;i<ringIdx.length;i++){
+    cells[ringIdx[i]].textContent = `$${values[i].toFixed(2)}`;
+  }
+  cells[4].textContent = "SPIN";
+}
+function highlight(i){
+  const cells = [...document.querySelectorAll("#ru-grid .ru-cell")];
+  cells.forEach(c=>c.classList.remove("active"));
+  cells[ringIdx[i % ringIdx.length]].classList.add("active");
+}
+let ruBusy = false;
+function initRoulette(){
+  const vals = Array.from({length:8}, ()=> Number((Math.random()*9.5+0.5).toFixed(2)));
+  fillGrid(vals);
+  highlight(-1);
+  $("#ru-result").textContent = "—";
+}
+$("#ru-spin").onclick = async ()=>{
+  if(ruBusy) return;
+  ruBusy = true;
+  $("#ru-result").textContent = "Спин...";
+  const res = await post("/roulette_spin", {user_id});
+  if(!res.ok){
+    ruBusy = false;
+    if(res.error==="NO_FUNDS") alert("Недостаточно средств: нужно $1");
+    else alert("Ошибка рулетки");
+    return;
+  }
+  const wheel = res.wheel.map(Number);
+  fillGrid(wheel);
+  let i = 0, total = ringIdx.length*3 + (ringIdx.length-1);
+  function step(delay){
+    if(i <= total){ highlight(i); i++; setTimeout(()=>step(Math.min(120, delay+12)), delay); }
+    else {
+      const rem = (7 - ((i-1) % ringIdx.length) + ringIdx.length) % ringIdx.length;
+      if(rem>0){ total += rem; setTimeout(()=>step(120), 120); return; }
+      $("#ru-result").textContent = `Выигрыш: $${Number(res.win).toFixed(2)} • Баланс: $${Number(res.balance).toFixed(2)}`;
+      ruBusy = false;
+      loadStats(); loadLogs();
+    }
+  }
+  step(40);
+};
+initRoulette();
 
 /* ---------- старт ---------- */
 show("menu");
