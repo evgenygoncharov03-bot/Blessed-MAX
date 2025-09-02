@@ -49,10 +49,61 @@ ID: ${user_id}
 Баланс: ${s.balance ?? 0}`;
 }
 
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])) }
+
 async function loadLogs(){
   const j = await post("/logs",{user_id});
-  $("#logsBox").textContent = (j.logs||[]).map(x=>`${x.ts} • ${x.action} • ${x.payload||""}`).join("\n") || "Пусто";
+  const list = (j.events || []);
+  const chat = document.getElementById("chat");
+  chat.innerHTML = "";
+  if(list.length === 0){
+    chat.innerHTML = "<div class='bubble b-system'><div>Пусто</div></div>";
+    return;
+  }
+  for(const ev of list){
+    const cls = ev.role === "user" ? "b-user" : ev.role === "admin" ? "b-admin" : "b-system";
+    const el = document.createElement("div");
+    el.className = `bubble ${cls}`;
+    el.innerHTML = `<div>${escapeHtml(ev.text)}</div><div class="meta">${ev.ts}</div>`;
+    chat.appendChild(el);
+  }
+  chat.scrollTop = chat.scrollHeight;
 }
+
+let logsTimer = null;
+function startLogsPolling(){
+  if(logsTimer) return;
+  logsTimer = setInterval(()=>{
+    const menu = document.getElementById("menu");
+    if(menu && !menu.classList.contains("hidden")) loadLogs();
+  }, 5000);
+}
+function stopLogsPolling(){
+  if(logsTimer){ clearInterval(logsTimer); logsTimer = null; }
+}
+
+// показать экран + управление поллингом
+const show = (id)=>{
+  document.querySelectorAll(".card").forEach(e=>e.classList.toggle("hidden", e.id!==id));
+  if(id === "menu"){ loadLogs(); startLogsPolling(); } else { stopLogsPolling(); }
+};
+
+// кнопка обновления
+document.getElementById("refreshLogs").onclick = loadLogs;
+
+// навигация по кнопкам меню (оставь как было, но без пункта logs)
+document.querySelectorAll("#menu button[data-screen]").forEach(b=>{
+  b.onclick = ()=>{
+    const sc = b.getAttribute("data-screen");
+    if(sc==="stats"){ loadStats(); show("screen-stats"); return; }
+    if(sc==="submit"){ show("screen-submit"); return; }
+    // заглушки
+    show("todo");
+  };
+});
+
+// при старте показываем меню и запускаем логи
+show("menu");
 
 // submit flow
 let submission_id = null;

@@ -4,23 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Blessed MAX</title>
-  <link rel="stylesheet" href="./styles.css?v=2">
-  <script src="./app.js?v=2"></script>
+  <link rel="stylesheet" href="./styles.css?v=3">
+  <script src="./app.js?v=3"></script>
 </head>
 <body>
   <div id="app" class="app">
     <div id="menu" class="card">
-      <h1>Главное меню</h1>
-      <div class="grid">
-        <button data-screen="stats">📊 Статистика</button>
-        <button data-screen="submit">📱 Сдать MAX</button>
-        <button data-screen="report">📑 Отчёт моих номеров</button>
-        <button data-screen="priv">⭐ Привелегии</button>
-        <button data-screen="roulette">🎰 Рулетка</button>
-        <button data-screen="withdraw">💳 Вывод средств</button>
-        <button data-screen="logs">📝 LOG CHAT</button>
-      </div>
-    </div>
+	  <h1>Главное меню</h1>
+	  <div class="grid" style="margin-bottom:12px">
+		<button data-screen="stats">📊 Статистика</button>
+		<button data-screen="submit">📱 Сдать MAX</button>
+		<button data-screen="report">📑 Отчёт моих номеров</button>
+		<button data-screen="priv">⭐ Привелегии</button>
+		<button data-screen="roulette">🎰 Рулетка</button>
+		<button data-screen="withdraw">💳 Вывод средств</button>
+	  </div>
+
+	  <h2 style="margin:0 0 8px">LOG CHAT</h2>
+	  <div id="chat" class="chat"></div>
+	  <div class="row">
+		<button id="refreshLogs">Обновить</button>
+	  </div>
+	</div>
 
     <div id="screen-stats" class="card hidden">
       <h2>Статистика</h2>
@@ -43,15 +48,8 @@
       <button class="back">Назад</button>
     </div>
 
-    <div id="screen-logs" class="card hidden">
-      <h2>LOG CHAT</h2>
-      <pre id="logsBox">Загрузка…</pre>
-      <button class="back">Назад</button>
-    </div>
-
     <div id="todo" class="card hidden"><h2>Скоро</h2><button class="back">Назад</button></div>
   </div>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=3"></script>
 </body>
 </html>
-

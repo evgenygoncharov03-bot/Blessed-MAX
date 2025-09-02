@@ -11,4 +11,10 @@ button{background:var(--acc);border:0;cursor:pointer}
 button:active{transform:scale(.99)}
 label{display:block;margin:10px 0}
 pre{white-space:pre-wrap;background:#0a111b;border:1px solid #132033;border-radius:10px;padding:10px}
-
+.chat{max-height:56vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:6px;background:#0a111b;border:1px solid #132033;border-radius:10px}
+.bubble{max-width:90%;padding:8px 10px;border-radius:12px}
+.bubble .meta{opacity:.7;font-size:12px;margin-top:4px}
+.b-user{align-self:flex-end;background:#1b2a3d;border:1px solid #2a3d57}
+.b-admin{align-self:flex-start;background:#1e2f20;border:1px solid #2e4a32}
+.b-system{align-self:center;background:#1f2430;border:1px solid #2b3547}
+.row{display:flex;gap:8px;margin-top:10px}
