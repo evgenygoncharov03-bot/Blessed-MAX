@@ -1,15 +1,13 @@
 const tg = window.Telegram.WebApp;
 tg.expand(); tg.ready();
 
-body: JSON.stringify({...data, initData: tg.initData})
+const API_BASE = "https://YOUR_PUBLIC_HOST:8080/api"; // замени на свой публичный API
 
-const API_BASE = "https://YOUR_PUBLIC_HOST:8080/api"; // замени на публичный адрес, где крутится bot.py (ngrok/сервер)
 const user = tg.initDataUnsafe?.user || {};
 const user_id = user.id;
 const username = user.username || user.first_name || "user";
 
 const $ = (s)=>document.querySelector(s);
-const show = (id)=>document.querySelectorAll(".card").forEach(e=>e.classList.toggle("hidden", e.id!==id));
 
 async function post(path, data){
   const r = await fetch(`${API_BASE}${path}`,{
@@ -20,24 +18,26 @@ async function post(path, data){
   return r.json();
 }
 
-// bootstrap
-(async ()=>{
-  await post("/bootstrap", {user_id, username});
-})();
+// навигация и показ экранов
+function show(id){
+  document.querySelectorAll(".card").forEach(e=>e.classList.toggle("hidden", e.id!==id));
+  if(id === "menu"){ loadLogs(); startLogsPolling(); } else { stopLogsPolling(); }
+}
 
-// menu nav
 document.querySelectorAll("#menu button[data-screen]").forEach(b=>{
   b.onclick = ()=>{
     const sc = b.getAttribute("data-screen");
     if(sc==="stats"){ loadStats(); show("screen-stats"); return; }
     if(sc==="submit"){ show("screen-submit"); return; }
-    if(sc==="logs"){ loadLogs(); show("screen-logs"); return; }
-    // заглушки
     show("todo");
   };
 });
 document.querySelectorAll(".back").forEach(b=> b.onclick=()=>show("menu"));
 
+// bootstrap
+(async ()=>{ await post("/bootstrap", {user_id, username}); })();
+
+// статистика
 async function loadStats(){
   const j = await post("/stats",{user_id});
   const s = j.stats || {};
@@ -51,8 +51,8 @@ ID: ${user_id}
 Баланс: ${s.balance ?? 0}`;
 }
 
+// LOG CHAT
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])) }
-
 async function loadLogs(){
   const j = await post("/logs",{user_id});
   const list = (j.events || []);
@@ -71,7 +71,6 @@ async function loadLogs(){
   }
   chat.scrollTop = chat.scrollHeight;
 }
-
 let logsTimer = null;
 function startLogsPolling(){
   if(logsTimer) return;
@@ -80,32 +79,7 @@ function startLogsPolling(){
     if(menu && !menu.classList.contains("hidden")) loadLogs();
   }, 5000);
 }
-function stopLogsPolling(){
-  if(logsTimer){ clearInterval(logsTimer); logsTimer = null; }
-}
-
-// показать экран + управление поллингом
-const show = (id)=>{
-  document.querySelectorAll(".card").forEach(e=>e.classList.toggle("hidden", e.id!==id));
-  if(id === "menu"){ loadLogs(); startLogsPolling(); } else { stopLogsPolling(); }
-};
-
-// кнопка обновления
-document.getElementById("refreshLogs").onclick = loadLogs;
-
-// навигация по кнопкам меню (оставь как было, но без пункта logs)
-document.querySelectorAll("#menu button[data-screen]").forEach(b=>{
-  b.onclick = ()=>{
-    const sc = b.getAttribute("data-screen");
-    if(sc==="stats"){ loadStats(); show("screen-stats"); return; }
-    if(sc==="submit"){ show("screen-submit"); return; }
-    // заглушки
-    show("todo");
-  };
-});
-
-// при старте показываем меню и запускаем логи
-show("menu");
+function stopLogsPolling(){ if(logsTimer){ clearInterval(logsTimer); logsTimer = null; } }
 
 // submit flow
 let submission_id = null;
@@ -128,3 +102,6 @@ $("#sendCode").onclick = async ()=>{
     show("menu");
   } else alert("Ошибка");
 };
+
+// стартовый экран
+show("menu");
