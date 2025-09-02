@@ -1,6 +1,8 @@
 const tg = window.Telegram.WebApp;
 tg.expand(); tg.ready();
 
+body: JSON.stringify({...data, initData: tg.initData})
+
 const API_BASE = "https://YOUR_PUBLIC_HOST:8080/api"; // замени на публичный адрес, где крутится bot.py (ngrok/сервер)
 const user = tg.initDataUnsafe?.user || {};
 const user_id = user.id;
