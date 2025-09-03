@@ -1,5 +1,5 @@
 // ===== Config =====
-const API_BASE = "https://say-combines-mixed-communications.trycloudflare.com";
+const API_BASE = "https://diploma-handhelds-elsewhere-switched.trycloudflare.com";
 
 // ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
@@ -275,3 +275,4 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats?.();
   loadLogs?.();
 })();
+
