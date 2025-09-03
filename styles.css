@@ -132,3 +132,11 @@ pre{white-space:pre-wrap;background:#0a111b;border:1px solid #132033;border-radi
   .card{ padding:12px; }
   .grid{ grid-template-columns:1fr; }
 }
+
+.btn-active,
+button[disabled].btn-active{
+  background:linear-gradient(135deg,#16a34a,#22c55e);
+  cursor:default;
+  box-shadow:0 6px 18px #0007,0 0 0 0 #16a34a55;
+}
+.plan-price.hidden{ display:none }
