@@ -9,7 +9,7 @@ const tg = window.Telegram?.WebApp; tg && tg.expand();
 const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
-const API_BASE = ""; // пусто = тот же хост, где запущен backend прокси/туннелем
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // пусто = тот же хост, где запущен backend прокси/туннелем
 
 // Notify (из предыдущей версии)
 const Notify = (() => {
@@ -218,4 +218,5 @@ $("#std-activate").onclick = async ()=>{
 
 // Bootstrap
 (async ()=>{ await post("/bootstrap",{}); loadStats(); loadLogs(); })();
+
 
