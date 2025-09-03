@@ -1,6 +1,6 @@
 // ===== Config =====
 // Укажи базовый URL туннеля Cloudflare/другого прокси. БЕЗ /api в конце.
-const API_BASE = "https://create-bride-terrorist-definitely.trycloudflare.com";
+const API_BASE = "https://potential-hook-clark-nonprofit.trycloudflare.com";
 
 // ===== Helpers =====
 const $ = sel => document.querySelector(sel);
@@ -235,5 +235,6 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   loadStats();
   loadLogs();
 })();
+
 
 
