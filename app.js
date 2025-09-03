@@ -46,13 +46,21 @@ async function post(path, data){
 
 // Навигация
 function show(id){
-  document.querySelectorAll(".card").forEach(el=>{ if(el.id==="menu") return; el.classList.add("hidden"); el.setAttribute("aria-hidden","true"); });
+  // скрыть ВСЕ карты, включая меню
+  document.querySelectorAll(".card").forEach(el=>{
+    el.classList.add("hidden");
+    el.setAttribute("aria-hidden","true");
+  });
+  // показать нужный
   const el = (id==="menu") ? $("#menu") : $("#screen-"+id);
-  el.classList.remove("hidden"); el.setAttribute("aria-hidden","false");
-  if(id==="stats") loadStats();
-  if(id==="report") loadReport();
+  if(!el) return;
+  el.classList.remove("hidden");
+  el.setAttribute("aria-hidden","false");
+
+  if(id==="stats")   loadStats();
+  if(id==="report")  loadReport();
   if(id==="roulette") setupRoulette();
-  if(id==="priv") loadPriv();
+  if(id==="priv")    loadPriv();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
@@ -210,3 +218,4 @@ $("#std-activate").onclick = async ()=>{
 
 // Bootstrap
 (async ()=>{ await post("/bootstrap",{}); loadStats(); loadLogs(); })();
+
