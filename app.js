@@ -52,7 +52,7 @@ async function post(path, data){
   }
 }
 
-// ===== Навигация (всегда один экран) =====
+// ===== Навигация =====
 function show(id){
   document.querySelectorAll(".card").forEach(el=>{
     el.classList.add("hidden");
@@ -68,6 +68,7 @@ function show(id){
   if(id==="roulette") setupRoulette();
   if(id==="priv")     loadPriv();
   if(id==="withdraw") refreshWithdrawBalance();
+  if(id==="contests") loadContests();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
@@ -147,7 +148,7 @@ async function loadReport(){
 }
 $("#reportRefresh")?.addEventListener("click", loadReport);
 
-// ===== Рулетка (кейс-лента) =====
+// ===== Рулетка =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
@@ -264,6 +265,48 @@ $("#wdCancel")?.addEventListener("click", async () => {
   await refreshWithdrawBalance();
   loadLogs();
 });
+
+// ===== Конкурсы =====
+async function loadContests(){
+  const r = await post("/contests", {});
+  const list = $("#contestList"); list.innerHTML = "";
+  const items = r.items || [];
+  if(items.length === 0){
+    list.innerHTML = `<div class="muted">Активных конкурсов нет</div>`;
+    return;
+  }
+  items.forEach(c=>{
+    const d = document.createElement("div");
+    d.className = "contest-card";
+    const until = c.until ? `до ${escapeHtml(c.until)}` : "дата не указана";
+    d.innerHTML = `
+      <div class="contest-title">🏆 ${escapeHtml(c.title)}</div>
+      <div class="contest-meta">
+        <span>Приз: <b>${escapeHtml(c.prize)}</b></span>
+        <span>Победителей: <b>${c.winners||1}</b></span>
+        <span>${until}</span>
+        <span>Участников: <b>${c.entries||0}</b></span>
+      </div>
+      <div class="contest-actions">
+        <button data-join="${c.id}">Участвовать</button>
+      </div>
+    `;
+    list.appendChild(d);
+  });
+  list.querySelectorAll("[data-join]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const id = Number(b.dataset.join);
+      const j = await post("/contest_join", { contest_id: id });
+      if(!j.ok){
+        if(j.error==="ALREADY") return Notify.info("Вы уже участвуете");
+        if(j.error==="CLOSED")  return Notify.error("Конкурс закрыт");
+        return Notify.error("Ошибка участия");
+      }
+      Notify.success("Участие подтверждено");
+      loadContests();
+    });
+  });
+}
 
 // ===== Bootstrap =====
 (async ()=>{
