@@ -237,33 +237,32 @@ function refreshWithdrawBalance(){
   }).catch(()=>{});
 }
 
-$("#wdSend")?.addEventListener("click", async ()=>{
-  const vRaw = $("#wdAmount")?.value || "";
-  const v = parseFloat(String(vRaw).replace(",", "."));
-  if(!isFinite(v)) return Notify.error("Введите сумму");
-  if(v < 5 || v > 100) return Notify.error("Допустимо от $5 до $100");
-  const res = await post("/withdraw_request", { amount: v });
+document.querySelector('#wdSend')?.addEventListener('click', async () => {
+  const raw = document.querySelector('#wdAmount')?.value || "";
+  const amount = parseFloat(String(raw).replace(',', '.'));
+
+  if(!isFinite(amount)) return Notify.error("Введите сумму");
+  if(amount < 5 || amount > 100) return Notify.error("Допустимо от $5 до $100");
+
+  const res = await post("/withdraw_request", { amount });
   if(!res.ok){
-    if(res.error==="NO_FUNDS") return Notify.error("Недостаточно средств");
-    if(res.error==="PENDING_EXISTS") return Notify.error("У вас уже есть активная заявка");
-    if(res.error==="AMOUNT_RANGE") return Notify.error("Сумма вне диапазона");
-    return Notify.error("Ошибка");
+    if(res.error === "NO_FUNDS")         return Notify.error("Недостаточно средств");
+    if(res.error === "PENDING_EXISTS")   return Notify.info("У вас уже есть активная заявка");
+    if(res.error === "AMOUNT_RANGE")     return Notify.error("Диапазон $5–$100");
+    return Notify.error("Ошибка запроса");
   }
-  $("#wdAmount").value = "";
-  refreshWithdrawBalance();
-  Notify.info("Заявка отправлена админам");
+  Notify.success("Заявка создана");
+  document.querySelector('#wdAmount').value = "";
+  await refreshWithdrawBalance();
+  loadLogs?.();
 });
 
-$("#wdCancel")?.addEventListener("click", async ()=>{
-  const res = await post("/withdraw_cancel",{});
-  if(res.ok){ Notify.info("Заявка отменена"); refreshWithdrawBalance(); }
-  else { Notify.error(res.error==="NO_PENDING" ? "Активной заявки нет" : "Не удалось отменить"); }
-});
-
-$("#wdCancel")?.addEventListener("click", async ()=>{
-  const res = await post("/withdraw_cancel",{});
-  if(res.ok){ Notify.info("Заявка отменена"); refreshWithdrawBalance(); }
-  else { Notify.error(res.error==="NO_PENDING" ? "Активной заявки нет" : "Не удалось отменить"); }
+document.querySelector('#wdCancel')?.addEventListener('click', async () => {
+  const res = await post("/withdraw_cancel", {});
+  if(!res.ok) return Notify.error("Нет активной заявки");
+  Notify.info("Заявка отменена");
+  await refreshWithdrawBalance();
+  loadLogs?.();
 });
 
 // ===== Bootstrap =====
@@ -272,3 +271,4 @@ $("#wdCancel")?.addEventListener("click", async ()=>{
   loadStats();
   loadLogs();
 })();
+
