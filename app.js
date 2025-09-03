@@ -1,8 +1,7 @@
 // ===== Config =====
-// Если фронт = GitHub Pages, а бэкенд = Cloudflare Tunnel, укажи URL туннеля:
-const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // например: "https://your-subdomain.trycloudflare.com"
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // пример: "https://your-subdomain.trycloudflare.com"
 
-// ===== Helpers =====
+// ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
@@ -14,7 +13,7 @@ const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
 
-// ===== Notify (toast + modal) =====
+// ===== Notify =====
 const Notify = (() => {
   const root = document.getElementById("notify-root");
   const modal = document.getElementById("notify-modal");
@@ -53,7 +52,7 @@ async function post(path, data){
   }
 }
 
-// ===== Навигация (ровно один экран) =====
+// ===== Навигация (всегда один экран) =====
 function show(id){
   document.querySelectorAll(".card").forEach(el=>{
     el.classList.add("hidden");
@@ -147,7 +146,7 @@ async function loadReport(){
 }
 $("#reportRefresh")?.addEventListener("click", loadReport);
 
-// ===== Рулетка: кейс-анимация =====
+// ===== Рулетка (кейс-лента) =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
@@ -231,4 +230,3 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   loadStats();
   loadLogs();
 })();
-
