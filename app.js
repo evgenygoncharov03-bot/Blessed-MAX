@@ -1,5 +1,5 @@
 // ===== Config =====
-const API_BASE = "https://diploma-handhelds-elsewhere-switched.trycloudflare.com";
+const API_BASE = "https://jamaica-shorter-identifier-harvest.trycloudflare.com";
 
 // ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
@@ -306,4 +306,5 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
