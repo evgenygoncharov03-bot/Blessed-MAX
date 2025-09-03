@@ -67,7 +67,20 @@
       <button class="back">Назад</button>
     </div>
 
+  <!-- Notify UI -->
+  <div id="notify-root" class="notify-root" aria-live="polite"></div>
+  
+  <div id="notify-modal" class="notify-modal hidden" aria-hidden="true">
+    <div class="notify-backdrop"></div>
+    <div class="notify-dialog">
+      <div class="notify-title" id="notify-title">Сообщение</div>
+      <div class="notify-content" id="notify-content"></div>
+      <button id="notify-close" class="notify-btn">Закрыть</button>
+    </div>
+  </div>
+
   </div>
   <script src="./app.js?v=R4001"></script>
 </body>
 </html>
+
