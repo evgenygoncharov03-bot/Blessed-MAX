@@ -223,13 +223,7 @@ async function loadPriv(){
   const $ = (q) => document.querySelector(q);
   const toast = (s) => { try { notify(s); } catch { alert(s); } };
 
-  async function post(url, data) {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(Object.assign({initData}, data||{}))
-    });
-    return r.json();
+  return r.json();
   }
 
   // показать баланс на экране вывода
@@ -275,4 +269,5 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats?.();
   loadLogs?.();
 })();
+
 
