@@ -1,5 +1,5 @@
 // ===== Config =====
-const API_BASE = "https://genre-considers-medications-rapids.trycloudflare.com";
+const API_BASE = "https://say-combines-mixed-communications.trycloudflare.com";
 
 // ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
@@ -40,15 +40,17 @@ const Notify = (() => {
 // ===== HTTP =====
 async function post(path, data){
   try{
-    const res = await fetch((API_BASE||"")+"/api"+path, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
+    const res = await fetch((API_BASE||"") + "/api" + path, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(Object.assign({
+        initData: (window.Telegram?.WebApp?.initData || "")
+      }, data||{}))
     });
     return await res.json();
   }catch(e){
-    Notify.error("Нет связи с сервером");
-    return {ok:false,error:"NETWORK"};
+    console.error("API error:", e);
+    return { ok:false, error:"NETWORK" };
   }
 }
 
@@ -67,7 +69,7 @@ function show(id){
   if(id==="report")   loadReport();
   if(id==="roulette") setupRoulette();
   if(id==="priv")     loadPriv();
-  if(id==="withdraw") refreshWithdrawBalance();
+  if(id==="withdraw") refreshWithdrawBalance(); 
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
@@ -267,8 +269,9 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
 
 // ===== Bootstrap =====
 (async ()=>{
-  await post("/bootstrap",{});
-  loadStats();
-  loadLogs();
+  const r = await post("/bootstrap", {});
+  if(!r?.ok) console.warn("bootstrap failed", r?.error);
+  // продолжай грузить UI даже при ошибке сети
+  loadStats?.();
+  loadLogs?.();
 })();
-
