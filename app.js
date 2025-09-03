@@ -250,6 +250,47 @@ def build_app():
         web.route("OPTIONS", "/api/{tail:.*}", lambda r: web.Response()),
     ])
     return app
+	
+// === Notify system ===
+const Notify = (() => {
+  const root = document.getElementById("notify-root");
+  const modal = document.getElementById("notify-modal");
+  const mTitle = document.getElementById("notify-title");
+  const mCont  = document.getElementById("notify-content");
+  const mClose = document.getElementById("notify-close");
+  mClose.onclick = () => hideModal();
+
+  function toast(msg, {title="", type="info", timeout=2500} = {}){
+    const el = document.createElement("div");
+    el.className = `notif ${type}`;
+    el.innerHTML = `
+      <div>
+        ${title ? `<div class="title">${escapeHtml(title)}</div>` : ""}
+        <div class="msg">${escapeHtml(msg)}</div>
+      </div>
+      <button class="x" aria-label="Закрыть">×</button>
+    `;
+    el.querySelector(".x").onclick = () => remove();
+    root.appendChild(el);
+    let t = setTimeout(remove, timeout);
+    function remove(){ clearTimeout(t); if(el.parentNode) el.parentNode.removeChild(el); }
+    return {close: remove};
+  }
+  function showModal({title="Сообщение", html="", onClose=null}={}){
+    mTitle.textContent = title; mCont.innerHTML = html;
+    modal.classList.remove("hidden"); modal.setAttribute("aria-hidden","false");
+    mClose.onclick = ()=>{ hideModal(); onClose && onClose(); };
+  }
+  function hideModal(){
+    modal.classList.add("hidden"); modal.setAttribute("aria-hidden","true");
+  }
+  return {
+    toast, info:(m,o)=>toast(m,{...o,type:"info"}),
+    success:(m,o)=>toast(m,{...o,type:"success"}),
+    error:(m,o)=>toast(m,{...o,type:"error"}),
+    modal: showModal, close: hideModal
+  };
+})();
 
 async def main():
     init_db()
