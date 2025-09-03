@@ -1,7 +1,8 @@
 // ===== Config =====
-const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // пример: "https://your-subdomain.trycloudflare.com"
+// Укажи базовый URL туннеля Cloudflare/другого прокси. БЕЗ /api в конце.
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api";
 
-// ===== Shortcuts =====
+// ===== Helpers =====
 const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
@@ -13,7 +14,7 @@ const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
 
-// ===== Notify =====
+// ===== Notify (toast + modal) =====
 const Notify = (() => {
   const root = document.getElementById("notify-root");
   const modal = document.getElementById("notify-modal");
@@ -38,9 +39,13 @@ const Notify = (() => {
 })();
 
 // ===== HTTP =====
+function buildApiUrl(path){
+  const base = (API_BASE||"").replace(/\/+$/,"");
+  return base + "/api" + path;
+}
 async function post(path, data){
   try{
-    const res = await fetch((API_BASE||"")+"/api"+path, {
+    const res = await fetch(buildApiUrl(path), {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
@@ -52,7 +57,7 @@ async function post(path, data){
   }
 }
 
-// ===== Навигация (всегда один экран) =====
+// ===== Навигация (ровно один экран) =====
 function show(id){
   document.querySelectorAll(".card").forEach(el=>{
     el.classList.add("hidden");
@@ -146,7 +151,7 @@ async function loadReport(){
 }
 $("#reportRefresh")?.addEventListener("click", loadReport);
 
-// ===== Рулетка (кейс-лента) =====
+// ===== Рулетка: кейс-анимация =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
