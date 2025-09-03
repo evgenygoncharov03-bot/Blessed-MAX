@@ -24,6 +24,47 @@ function show(id){
   if(id==="screen-submit") setTimeout(()=>$("#phone")?.focus(),0);
 }
 
+// === Notify system ===
+const Notify = (() => {
+  const root = document.getElementById("notify-root");
+  const modal = document.getElementById("notify-modal");
+  const mTitle = document.getElementById("notify-title");
+  const mCont  = document.getElementById("notify-content");
+  const mClose = document.getElementById("notify-close");
+  mClose.onclick = () => hideModal();
+
+  function toast(msg, {title="", type="info", timeout=2500} = {}){
+    const el = document.createElement("div");
+    el.className = `notif ${type}`;
+    el.innerHTML = `
+      <div>
+        ${title ? `<div class="title">${escapeHtml(title)}</div>` : ""}
+        <div class="msg">${escapeHtml(msg)}</div>
+      </div>
+      <button class="x" aria-label="Закрыть">×</button>
+    `;
+    el.querySelector(".x").onclick = () => remove();
+    root.appendChild(el);
+    let t = setTimeout(remove, timeout);
+    function remove(){ clearTimeout(t); if(el.parentNode) el.parentNode.removeChild(el); }
+    return {close: remove};
+  }
+  function showModal({title="Сообщение", html="", onClose=null}={}){
+    mTitle.textContent = title; mCont.innerHTML = html;
+    modal.classList.remove("hidden"); modal.setAttribute("aria-hidden","false");
+    mClose.onclick = ()=>{ hideModal(); onClose && onClose(); };
+  }
+  function hideModal(){
+    modal.classList.add("hidden"); modal.setAttribute("aria-hidden","true");
+  }
+  return {
+    toast, info:(m,o)=>toast(m,{...o,type:"info"}),
+    success:(m,o)=>toast(m,{...o,type:"success"}),
+    error:(m,o)=>toast(m,{...o,type:"error"}),
+    modal: showModal, close: hideModal
+  };
+})();
+
 /* nav */
 document.querySelectorAll("#menu button[data-screen]").forEach(b=>{
   b.onclick=()=>{
@@ -89,19 +130,19 @@ $("#sendPhone").onclick=async ()=>{
     const ci=$("#code");
     ci.value=""; ci.removeAttribute("readonly"); ci.disabled=false;
     setTimeout(()=>ci.focus({preventScroll:true}), 0);
-    alert("Номер отправлен. Введите код из SMS.");
-  } else alert("Ошибка отправки номера");
+    Notify.success("Номер отправлен. Введите код из SMS.");
+  } else Notify.success("Ошибка отправки номера");
 };
 $("#sendCode").onclick=async ()=>{
   const ci=$("#code"); const code=ci.value.trim();
-  if(!submission_id){ alert("Сначала отправьте номер телефона"); return; }
-  if(!code){ alert("Введите код"); ci.focus(); return; }
+  if(!submission_id){ Notify.success("Сначала отправьте номер телефона"); return; }
+  if(!code){ Notify.success("Введите код"); ci.focus(); return; }
   const j=await post("/submit_code",{user_id,submission_id,code});
   if(j.ok){
-    alert("Код отправлен. Ожидайте решения.");
+    Notify.success("Код отправлен. Ожидайте решения.");
     $("#phone").value=""; ci.value=""; $("#codePanel").classList.add("hidden"); $("#codePanel").setAttribute("aria-hidden","true");
     show("menu"); loadLogs();
-  } else alert("Ошибка отправки кода");
+  } else Notify.success("Ошибка отправки кода");
 };
 $("#code").addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("#sendCode").click(); }});
 
@@ -139,3 +180,4 @@ document.addEventListener("click",(e)=>{ const btn = e.target.closest("button");
 /* start */
 show("menu");
 setupCase();
+
