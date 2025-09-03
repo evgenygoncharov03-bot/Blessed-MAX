@@ -2,13 +2,13 @@
 const API_BASE = "https://diploma-handhelds-elsewhere-switched.trycloudflare.com";
 
 // ===== Shortcuts =====
-const $ = (sel) => document.querySelector(sel);
+const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
 document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target,e)});
 
 // ===== Telegram WebApp =====
-const tg = window.Telegram?.WebApp; if(tg) tg.expand();
+const tg = window.Telegram?.WebApp; tg && tg.expand();
 const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
@@ -43,7 +43,7 @@ async function post(path, data){
     const res = await fetch((API_BASE||"")+"/api"+path, {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...(data||{}) })
+      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
     });
     return await res.json();
   }catch(e){
@@ -52,7 +52,7 @@ async function post(path, data){
   }
 }
 
-// ===== Навигация =====
+// ===== Навигация (всегда один экран) =====
 function show(id){
   document.querySelectorAll(".card").forEach(el=>{
     el.classList.add("hidden");
@@ -68,7 +68,6 @@ function show(id){
   if(id==="roulette") setupRoulette();
   if(id==="priv")     loadPriv();
   if(id==="withdraw") refreshWithdrawBalance();
-  if(id==="contests") loadContests();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
@@ -148,7 +147,7 @@ async function loadReport(){
 }
 $("#reportRefresh")?.addEventListener("click", loadReport);
 
-// ===== Рулетка =====
+// ===== Рулетка (кейс-лента) =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
@@ -178,16 +177,45 @@ $("#ru-spin")?.addEventListener("click", async ()=>{
     if(res.error==="NO_FUNDS") { Notify.error("Недостаточно средств: нужно $1"); loadLogs(); }
     else { Notify.error("Ошибка рулетки"); }
     return;
-  }
-  const strip = buildStrip(Number(res.win), 72);
-  renderStrip(strip);
-  $("#ru-result").textContent="Крутится…";
-  animateToLast(()=>{
-    $("#ru-result").textContent = `Выигрыш: $${Number(res.win).toFixed(2)} • Баланс: $${Number(res.balance).toFixed(2)}`;
-    ruBusy=false; loadStats(); loadLogs();
-    Notify.info(`Выигрыш: $${Number(res.win).toFixed(2)}`);
-  });
+  }	
+ 
+const stripVals = buildStrip(Number(res.win), 72);
+renderStrip(stripVals);
+$("#ru-result").textContent = "Крутится…";
+animateToWin(()=>{
+  $("#ru-result").textContent =
+    `Выигрыш: $${Number(res.win).toFixed(2)} - Баланс: $${Number(res.balance).toFixed(2)}`;
+  ruBusy = false; loadStats(); loadLogs();
+  Notify.info(`Выигрыш: $${Number(res.win).toFixed(2)}`);
 });
+
+function animateToWin(done){
+	  const strip = $("#case-strip");
+	  const tiles = strip.children;
+	  if(!tiles.length) return;
+	  const last = tiles[tiles.length - 1];
+
+	  // суммарная ширина ленты с зазорами
+	  const totalWidth = Array.from(tiles).reduce((s,t)=> s + t.offsetWidth + 10, 0);
+	  const view = strip.parentElement.clientWidth;
+	  const lastW = last.offsetWidth;
+
+	  // центр последней плитки в системе координат ленты
+	  const lastCenter = (totalWidth - lastW) + lastW / 2;
+	  // центр указателя — по центру вьюпорта
+	  const viewCenter = view / 2;
+
+	  const target = -(lastCenter - viewCenter);
+
+	  strip.animate(
+		[{transform:"translateX(0)"},{transform:`translateX(${target}px)`}],
+		{duration:3400, easing:"cubic-bezier(.2,.9,.1,1)"}
+	  ).onfinish = () => {
+		strip.style.transform = `translateX(${target}px)`;
+		done && done();
+	  };
+	}
+
 
 // ===== Привилегии =====
 async function loadPriv(){
@@ -215,37 +243,39 @@ async function loadPriv(){
   if(isStd){ stdPrice?.classList.add("hidden"); stdBtn.textContent="Активный"; stdBtn.disabled=true; stdBtn.classList.add("btn-active"); }
   else    { stdPrice?.classList.remove("hidden"); stdBtn.textContent="Активировать"; stdBtn.disabled=false; stdBtn.classList.remove("btn-active"); }
 }
-$("#buy-premium")?.addEventListener("click", async ()=>{
-  const r = await post("/priv/buy",{plan:"premium"});
-  if(!r.ok){ if(r.error==="NO_FUNDS") return Notify.error("Недостаточно средств"); return Notify.error("Ошибка покупки"); }
-  Notify.success("Премиум активирован"); loadPriv(); loadStats();
-});
-$("#buy-speed")?.addEventListener("click", async ()=>{
-  const r = await post("/priv/buy",{plan:"speed"});
-  if(!r.ok){ if(r.error==="NO_FUNDS") return Notify.error("Недостаточно средств"); return Notify.error("Ошибка покупки"); }
-  Notify.success("Speed активирован"); loadPriv(); loadStats();
-});
-$("#std-activate")?.addEventListener("click", async ()=>{
-  const r = await post("/priv/activate_standard",{});
-  if(!r.ok) return Notify.error("Ошибка");
-  if(Number(r.refund||0)>0) Notify.info(`Возврат: $${Number(r.refund).toFixed(2)}`);
-  loadPriv(); loadStats();
-});
 
-// ===== Вывод средств =====
+(() => {
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
+  const $ = (q) => document.querySelector(q);
+  const toast = (s) => { try { notify(s); } catch { alert(s); } };
+
+  async function post(url, data) {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(Object.assign({initData}, data||{}))
+    });
+    return r.json();
+  }
+
+  // показать баланс на экране вывода
 async function refreshWithdrawBalance(){
   const res = await post("/stats", {});
   if(res?.ok && res.stats){
     const bal = Number(res.stats.balance || 0);
-    const el = $("#wdBalance");
+    const el = document.querySelector("#wdBalance");
     if(el) el.textContent = bal.toFixed(2);
   }
 }
-$("#wdSend")?.addEventListener("click", async () => {
-  const raw = $("#wdAmount")?.value || "";
+
+document.querySelector('#wdSend')?.addEventListener('click', async () => {
+  const raw = document.querySelector('#wdAmount')?.value || "";
   const amount = parseFloat(String(raw).replace(',', '.'));
+
   if(!isFinite(amount)) return Notify.error("Введите сумму");
   if(amount < 5 || amount > 100) return Notify.error("Допустимо от $5 до $100");
+
   const res = await post("/withdraw_request", { amount });
   if(!res.ok){
     if(res.error === "NO_FUNDS")         return Notify.error("Недостаточно средств");
@@ -254,59 +284,18 @@ $("#wdSend")?.addEventListener("click", async () => {
     return Notify.error("Ошибка запроса");
   }
   Notify.success("Заявка создана");
-  $("#wdAmount").value = "";
+  document.querySelector('#wdAmount').value = "";
   await refreshWithdrawBalance();
-  loadLogs();
+  loadLogs?.();
 });
-$("#wdCancel")?.addEventListener("click", async () => {
+
+document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   const res = await post("/withdraw_cancel", {});
   if(!res.ok) return Notify.error("Нет активной заявки");
   Notify.info("Заявка отменена");
   await refreshWithdrawBalance();
-  loadLogs();
+  loadLogs?.();
 });
-
-// ===== Конкурсы =====
-async function loadContests(){
-  const r = await post("/contests", {});
-  const list = $("#contestList"); list.innerHTML = "";
-  const items = r.items || [];
-  if(items.length === 0){
-    list.innerHTML = `<div class="muted">Активных конкурсов нет</div>`;
-    return;
-  }
-  items.forEach(c=>{
-    const d = document.createElement("div");
-    d.className = "contest-card";
-    const until = c.until ? `до ${escapeHtml(c.until)}` : "дата не указана";
-    d.innerHTML = `
-      <div class="contest-title">🏆 ${escapeHtml(c.title)}</div>
-      <div class="contest-meta">
-        <span>Приз: <b>${escapeHtml(c.prize)}</b></span>
-        <span>Победителей: <b>${c.winners||1}</b></span>
-        <span>${until}</span>
-        <span>Участников: <b>${c.entries||0}</b></span>
-      </div>
-      <div class="contest-actions">
-        <button data-join="${c.id}">Участвовать</button>
-      </div>
-    `;
-    list.appendChild(d);
-  });
-  list.querySelectorAll("[data-join]").forEach(b=>{
-    b.addEventListener("click", async ()=>{
-      const id = Number(b.dataset.join);
-      const j = await post("/contest_join", { contest_id: id });
-      if(!j.ok){
-        if(j.error==="ALREADY") return Notify.info("Вы уже участвуете");
-        if(j.error==="CLOSED")  return Notify.error("Конкурс закрыт");
-        return Notify.error("Ошибка участия");
-      }
-      Notify.success("Участие подтверждено");
-      loadContests();
-    });
-  });
-}
 
 // ===== Bootstrap =====
 (async ()=>{
