@@ -67,6 +67,7 @@ function show(id){
   if(id==="report")   loadReport();
   if(id==="roulette") setupRoulette();
   if(id==="priv")     loadPriv();
+  if(id==="withdraw") refreshWithdrawBalance();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
@@ -278,46 +279,34 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   }
 
   // показать баланс на экране вывода
-  function refreshWithdrawBalance() {
-    post("/api/stats").then(res => {
-      if (res?.ok && res.stats) $("#wdBalance").textContent = (res.stats.balance ?? 0).toFixed(2);
-    }).catch(()=>{});
+function refreshWithdrawBalance(){
+  post("/stats",{}).then(res=>{
+    if(res?.ok && res.stats) $("#wdBalance").textContent = Number(res.stats.balance||0).toFixed(2);
+  }).catch(()=>{});
+}
+
+$("#wdSend")?.addEventListener("click", async ()=>{
+  const vRaw = $("#wdAmount")?.value || "";
+  const v = parseFloat(String(vRaw).replace(",", "."));
+  if(!isFinite(v)) return Notify.error("Введите сумму");
+  if(v < 5 || v > 100) return Notify.error("Допустимо от $5 до $100");
+  const res = await post("/withdraw_request", { amount: v });
+  if(!res.ok){
+    if(res.error==="NO_FUNDS") return Notify.error("Недостаточно средств");
+    if(res.error==="PENDING_EXISTS") return Notify.error("У вас уже есть активная заявка");
+    if(res.error==="AMOUNT_RANGE") return Notify.error("Сумма вне диапазона");
+    return Notify.error("Ошибка");
   }
+  $("#wdAmount").value = "";
+  refreshWithdrawBalance();
+  Notify.info("Заявка отправлена админам");
+});
 
-  // навешай на кнопку "Вывод средств" из главного меню если у тебя есть роутинг по data-screen
-  const scr = $("#screen-withdraw");
-  if (scr) {
-    // когда экран показывают — обнови баланс
-    const obs = new MutationObserver(() => {
-      const hidden = scr.classList.contains("hidden") || scr.getAttribute("aria-hidden")==="true";
-      if (!hidden) refreshWithdrawBalance();
-    });
-    obs.observe(scr, { attributes:true, attributeFilter:["class","aria-hidden"] });
-
-    $("#wdSend").addEventListener("click", async () => {
-      const v = parseFloat($("#wdAmount").value.replace(",", "."));
-      if (!isFinite(v)) return toast("Введите сумму");
-      if (v < 5 || v > 100) return toast("Допустимо от $5 до $100");
-      const res = await post("/api/withdraw_request", { amount: v });
-      if (!res.ok) {
-        const e = res.error || "ERR";
-        if (e === "NO_FUNDS") return toast("Недостаточно средств");
-        if (e === "PENDING_EXISTS") return toast("У вас уже есть активная заявка");
-        if (e === "AMOUNT_RANGE") return toast("Сумма вне диапазона");
-        return toast("Ошибка: " + e);
-      }
-      $("#wdAmount").value = "";
-      refreshWithdrawBalance();
-      toast("Заявка отправлена админам");
-    });
-
-    $("#wdCancel").addEventListener("click", async () => {
-      const res = await post("/api/withdraw_cancel");
-      if (res.ok) { toast("Заявка отменена"); refreshWithdrawBalance(); }
-      else { toast(res.error === "NO_PENDING" ? "Активной заявки нет" : "Не удалось отменить"); }
-    });
-  }
-})();
+$("#wdCancel")?.addEventListener("click", async ()=>{
+  const res = await post("/withdraw_cancel",{});
+  if(res.ok){ Notify.info("Заявка отменена"); refreshWithdrawBalance(); }
+  else { Notify.error(res.error==="NO_PENDING" ? "Активной заявки нет" : "Не удалось отменить"); }
+});
 
 // ===== Bootstrap =====
 (async ()=>{
@@ -325,7 +314,3 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   loadStats();
   loadLogs();
 })();
-
-
-
-
