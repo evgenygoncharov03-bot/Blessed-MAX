@@ -85,3 +85,50 @@ pre{white-space:pre-wrap;background:#0a111b;border:1px solid #132033;border-radi
 .plan-feats{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 .plan-price{font-weight:900;font-size:18px}
 .plan-note{font-size:12px;opacity:.75}
+
+/* === Responsive container === */
+.app{
+  max-width:960px;
+  margin:0 auto;
+  padding:16px;
+  min-height:100vh; height:100vh;
+  display:flex; flex-direction:column; gap:14px;
+}
+@supports (height:100svh){
+  .app{
+    min-height:100svh; height:100svh;
+    padding-top:calc(16px + env(safe-area-inset-top));
+    padding-bottom:calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+/* === Scrollable cards === */
+.card{
+  max-height:calc(100vh - 32px);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+@supports (height:100svh){
+  .card{ max-height:calc(100svh - 32px); }
+}
+
+/* === Back button always reachable === */
+.card .back{
+  position:sticky;
+  bottom:0;
+  z-index:1;
+  margin-top:8px;
+}
+
+/* === Privileges grid === */
+.plans{ grid-template-columns:1fr; }
+@media (min-width:600px){ .plans{ grid-template-columns:repeat(2,1fr); } }
+@media (min-width:900px){ .plans{ grid-template-columns:repeat(3,1fr); } }
+
+/* === Small screens tweaks === */
+@media (max-width:480px){
+  .app{ padding:12px; }
+  .card{ padding:12px; }
+  .grid{ grid-template-columns:1fr; }
+}
