@@ -2,13 +2,13 @@
 const API_BASE = "https://diploma-handhelds-elsewhere-switched.trycloudflare.com";
 
 // ===== Shortcuts =====
-const $ = sel => document.querySelector(sel);
+const $ = (sel) => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
 document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target,e)});
 
 // ===== Telegram WebApp =====
-const tg = window.Telegram?.WebApp; tg && tg.expand();
+const tg = window.Telegram?.WebApp; if(tg) tg.expand();
 const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
@@ -40,17 +40,15 @@ const Notify = (() => {
 // ===== HTTP =====
 async function post(path, data){
   try{
-    const res = await fetch((API_BASE||"") + "/api" + path, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(Object.assign({
-        initData: (window.Telegram?.WebApp?.initData || "")
-      }, data||{}))
+    const res = await fetch((API_BASE||"")+"/api"+path, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...(data||{}) })
     });
     return await res.json();
   }catch(e){
-    console.error("API error:", e);
-    return { ok:false, error:"NETWORK" };
+    Notify.error("Нет связи с сервером");
+    return {ok:false,error:"NETWORK"};
   }
 }
 
@@ -69,7 +67,7 @@ function show(id){
   if(id==="report")   loadReport();
   if(id==="roulette") setupRoulette();
   if(id==="priv")     loadPriv();
-  if(id==="withdraw") refreshWithdrawBalance(); 
+  if(id==="withdraw") refreshWithdrawBalance();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
@@ -216,30 +214,37 @@ async function loadPriv(){
   if(isStd){ stdPrice?.classList.add("hidden"); stdBtn.textContent="Активный"; stdBtn.disabled=true; stdBtn.classList.add("btn-active"); }
   else    { stdPrice?.classList.remove("hidden"); stdBtn.textContent="Активировать"; stdBtn.disabled=false; stdBtn.classList.remove("btn-active"); }
 }
+$("#buy-premium")?.addEventListener("click", async ()=>{
+  const r = await post("/priv/buy",{plan:"premium"});
+  if(!r.ok){ if(r.error==="NO_FUNDS") return Notify.error("Недостаточно средств"); return Notify.error("Ошибка покупки"); }
+  Notify.success("Премиум активирован"); loadPriv(); loadStats();
+});
+$("#buy-speed")?.addEventListener("click", async ()=>{
+  const r = await post("/priv/buy",{plan:"speed"});
+  if(!r.ok){ if(r.error==="NO_FUNDS") return Notify.error("Недостаточно средств"); return Notify.error("Ошибка покупки"); }
+  Notify.success("Speed активирован"); loadPriv(); loadStats();
+});
+$("#std-activate")?.addEventListener("click", async ()=>{
+  const r = await post("/priv/activate_standard",{});
+  if(!r.ok) return Notify.error("Ошибка");
+  if(Number(r.refund||0)>0) Notify.info(`Возврат: $${Number(r.refund).toFixed(2)}`);
+  loadPriv(); loadStats();
+});
 
-(() => {
-  const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
-  const $ = (q) => document.querySelector(q);
-  const toast = (s) => { try { notify(s); } catch { alert(s); } };
-
-  return r.json();
+// ===== Вывод средств =====
+async function refreshWithdrawBalance(){
+  const res = await post("/stats", {});
+  if(res?.ok && res.stats){
+    const bal = Number(res.stats.balance || 0);
+    const el = $("#wdBalance");
+    if(el) el.textContent = bal.toFixed(2);
   }
-
-  // показать баланс на экране вывода
-function refreshWithdrawBalance(){
-  post("/stats",{}).then(res=>{
-    if(res?.ok && res.stats) $("#wdBalance").textContent = Number(res.stats.balance||0).toFixed(2);
-  }).catch(()=>{});
 }
-
-document.querySelector('#wdSend')?.addEventListener('click', async () => {
-  const raw = document.querySelector('#wdAmount')?.value || "";
+$("#wdSend")?.addEventListener("click", async () => {
+  const raw = $("#wdAmount")?.value || "";
   const amount = parseFloat(String(raw).replace(',', '.'));
-
   if(!isFinite(amount)) return Notify.error("Введите сумму");
   if(amount < 5 || amount > 100) return Notify.error("Допустимо от $5 до $100");
-
   const res = await post("/withdraw_request", { amount });
   if(!res.ok){
     if(res.error === "NO_FUNDS")         return Notify.error("Недостаточно средств");
@@ -248,26 +253,21 @@ document.querySelector('#wdSend')?.addEventListener('click', async () => {
     return Notify.error("Ошибка запроса");
   }
   Notify.success("Заявка создана");
-  document.querySelector('#wdAmount').value = "";
+  $("#wdAmount").value = "";
   await refreshWithdrawBalance();
-  loadLogs?.();
+  loadLogs();
 });
-
-document.querySelector('#wdCancel')?.addEventListener('click', async () => {
+$("#wdCancel")?.addEventListener("click", async () => {
   const res = await post("/withdraw_cancel", {});
   if(!res.ok) return Notify.error("Нет активной заявки");
   Notify.info("Заявка отменена");
   await refreshWithdrawBalance();
-  loadLogs?.();
+  loadLogs();
 });
 
 // ===== Bootstrap =====
 (async ()=>{
-  const r = await post("/bootstrap", {});
-  if(!r?.ok) console.warn("bootstrap failed", r?.error);
-  // продолжай грузить UI даже при ошибке сети
-  loadStats?.();
-  loadLogs?.();
+  await post("/bootstrap",{});
+  loadStats();
+  loadLogs();
 })();
-
-
