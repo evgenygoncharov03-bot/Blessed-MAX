@@ -140,3 +140,10 @@ button[disabled].btn-active{
   box-shadow:0 6px 18px #0007,0 0 0 0 #16a34a55;
 }
 .plan-price.hidden{ display:none }
+
+.contest-list{display:grid;gap:10px}
+.contest-card{background:#0f1728;border:1px solid #20314a;border-radius:14px;padding:12px;display:grid;gap:8px}
+.contest-title{font-weight:800;font-size:16px}
+.contest-meta{font-size:13px;opacity:.85;display:flex;gap:12px;flex-wrap:wrap}
+.contest-actions{display:flex;gap:10px;flex-wrap:wrap}
+.contest-actions .secondary{background:#0b1324;border:1px solid #2a3960}
