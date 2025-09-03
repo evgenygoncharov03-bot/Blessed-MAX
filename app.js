@@ -194,15 +194,53 @@ async function loadPriv(){
   const rate = Number(r.rate||0).toFixed(2);
   $("#privSummary").textContent = `Тариф: ${p.plan||"standard"} • Ставка: $${rate}/мин • Действует до: ${p.plan_until||"—"}`;
 
-  const active = (p.plan==="premium"||p.plan==="speed") && p.plan_until;
-  $("#buy-premium").disabled = p.plan==="premium" && active;
-  $("#buy-speed").disabled   = p.plan==="speed"   && active;
+  const isPrem = p.plan==="premium" && !!p.plan_until;
+  const isSpeed= p.plan==="speed"   && !!p.plan_until;
+  const isStd  = !isPrem && !isSpeed;
 
-  const stdBtn = $("#std-activate");
-  if(p.plan==="standard" || !active){
-    stdBtn.textContent = "Активный"; stdBtn.disabled = true;
-  } else {
-    stdBtn.textContent = "Активировать"; stdBtn.disabled = false;
+  // Premium
+  const premPrice = $("#price-premium");
+  const premBtn   = $("#buy-premium");
+  if(isPrem){
+    premPrice?.classList.add("hidden");
+    premBtn.textContent = "Активен";
+    premBtn.disabled = true;
+    premBtn.classList.add("btn-active");
+  }else{
+    premPrice?.classList.remove("hidden");
+    premBtn.textContent = "Купить";
+    premBtn.disabled = false;
+    premBtn.classList.remove("btn-active");
+  }
+
+  // Speed
+  const speedPrice = $("#price-speed");
+  const speedBtn   = $("#buy-speed");
+  if(isSpeed){
+    speedPrice?.classList.add("hidden");
+    speedBtn.textContent = "Активен";
+    speedBtn.disabled = true;
+    speedBtn.classList.add("btn-active");
+  }else{
+    speedPrice?.classList.remove("hidden");
+    speedBtn.textContent = "Купить";
+    speedBtn.disabled = false;
+    speedBtn.classList.remove("btn-active");
+  }
+
+  // Standard
+  const stdPrice = $("#price-standard");
+  const stdBtn   = $("#std-activate");
+  if(isStd){
+    stdPrice?.classList.add("hidden");
+    stdBtn.textContent = "Активен";
+    stdBtn.disabled = true;
+    stdBtn.classList.add("btn-active");
+  }else{
+    stdPrice?.classList.remove("hidden");
+    stdBtn.textContent = "Активировать";
+    stdBtn.disabled = false;
+    stdBtn.classList.remove("btn-active");
   }
 }
 $("#buy-premium")?.addEventListener("click", async ()=>{
@@ -287,6 +325,7 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   loadStats();
   loadLogs();
 })();
+
 
 
 
