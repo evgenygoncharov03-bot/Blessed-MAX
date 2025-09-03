@@ -10,6 +10,7 @@
 <body>
   <div id="app" class="app">
 
+    <!-- Главное меню -->
     <div id="menu" class="card">
       <h1>Главное меню</h1>
       <div class="grid" style="margin-bottom:12px">
@@ -26,12 +27,14 @@
       <div class="row"><button id="refreshLogs">Обновить</button></div>
     </div>
 
+    <!-- Статистика -->
     <div id="screen-stats" class="card hidden" aria-hidden="true">
       <h2>Статистика</h2>
       <pre id="statsBox">Загрузка…</pre>
       <button class="back">Назад</button>
     </div>
 
+    <!-- Сдать MAX -->
     <div id="screen-submit" class="card hidden" aria-hidden="true">
       <h2>Сдать MAX</h2>
       <label>Номер телефона
@@ -47,12 +50,14 @@
       <button class="back">Назад</button>
     </div>
 
+    <!-- Отчёт -->
     <div id="screen-report" class="card hidden" aria-hidden="true">
       <h2>Отчёт моих номеров</h2>
       <div id="reportList"></div>
       <div class="row"><button id="reportRefresh">Обновить</button><button class="back">Назад</button></div>
     </div>
 
+    <!-- Привилегии -->
     <div id="screen-priv" class="card hidden" aria-hidden="true">
       <h2>Привилегии</h2>
       <div id="privSummary" class="priv-summary">Тариф: — • Ставка: — • Действует до: —</div>
@@ -96,11 +101,7 @@
       <div class="row"><button class="back">Назад</button></div>
     </div>
 
-    <div id="todo" class="card hidden" aria-hidden="true">
-      <h2>Скоро</h2>
-      <button class="back">Назад</button>
-    </div>
-
+    <!-- Рулетка -->
     <div id="screen-roulette" class="card hidden" aria-hidden="true">
       <h2>Рулетка</h2>
       <div class="ru-info">Цена спина: $1</div>
@@ -110,7 +111,13 @@
       <button class="back">Назад</button>
     </div>
 
-    <!-- Notify UI -->
+    <!-- Вывод средств (заглушка) -->
+    <div id="screen-withdraw" class="card hidden" aria-hidden="true">
+      <h2>Скоро</h2>
+      <button class="back">Назад</button>
+    </div>
+
+    <!-- Notify -->
     <div id="notify-root" class="notify-root" aria-live="polite"></div>
     <div id="notify-modal" class="notify-modal hidden" aria-hidden="true">
       <div class="notify-backdrop"></div>
@@ -122,6 +129,6 @@
     </div>
 
   </div>
-  <script src="./app.js?v=R5000"></script>
+  <script src="./app.js?v=R6003"></script>
 </body>
 </html>
