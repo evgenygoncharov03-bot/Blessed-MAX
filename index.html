@@ -127,11 +127,25 @@
         <button id="notify-close" class="notify-btn">Закрыть</button>
       </div>
     </div>
+	
+	<!-- Вывод средств -->
+	<div id="screen-withdraw" class="card hidden" aria-hidden="true">
+	  <h2>Вывод средств</h2>
+	  <div class="muted" style="margin:6px 0 12px">Доступно: <span id="wdBalance">—</span> $</div>
+	  <label>Сумма (5–100$)
+		<input id="wdAmount" type="number" inputmode="decimal" min="5" max="100" step="0.01" placeholder="10.00" />
+	  </label>
+	  <div class="row">
+		<button id="wdSend">Вывести</button>
+		<button class="back">Назад</button>
+	  </div>
+	  <div class="muted" style="margin-top:8px">Заявка уходит админам. Оплата по чеку Crypto Bot.</div>
+	  <div class="row" style="margin-top:6px">
+		<button id="wdCancel" class="secondary">Отменить активную заявку</button>
+	  </div>
+	</div>
 
   </div>
-  <script src="./app.js?v=R9311"></script>
+  <script src="./app.js?v=R9457"></script>
 </body>
 </html>
-
-
-
