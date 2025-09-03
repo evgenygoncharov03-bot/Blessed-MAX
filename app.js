@@ -1,6 +1,6 @@
 // ===== Config =====
 // Если фронт = GitHub Pages, а бэкенд = Cloudflare Tunnel, укажи URL туннеля:
-const API_BASE = ""; // например: "https://your-subdomain.trycloudflare.com"
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // например: "https://your-subdomain.trycloudflare.com"
 
 // ===== Helpers =====
 const $ = sel => document.querySelector(sel);
@@ -231,3 +231,4 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   loadStats();
   loadLogs();
 })();
+
