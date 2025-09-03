@@ -1,17 +1,20 @@
-// Helpers
+// ===== Config =====
+// Если фронт = GitHub Pages, а бэкенд = Cloudflare Tunnel, укажи URL туннеля:
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // например: "https://your-subdomain.trycloudflare.com"
+
+// ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e){e.classList.add("rippling"); const r=e.getBoundingClientRect(); e.style.setProperty("--rx",(event.clientX-r.left)+"px"); e.style.setProperty("--ry",(event.clientY-r.top)+"px"); setTimeout(()=>e.classList.remove("rippling"),300)}
-document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target)})
+document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target)});
 
-// Telegram init
+// ===== Telegram WebApp =====
 const tg = window.Telegram?.WebApp; tg && tg.expand();
 const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
-const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // пусто = тот же хост, где запущен backend прокси/туннелем
 
-// Notify (из предыдущей версии)
+// ===== Notify =====
 const Notify = (() => {
   const root = document.getElementById("notify-root");
   const modal = document.getElementById("notify-modal");
@@ -35,18 +38,24 @@ const Notify = (() => {
   return { toast, info:(m,o)=>toast(m,{...o,type:"info"}), success:(m,o)=>toast(m,{...o,type:"success"}), error:(m,o)=>toast(m,{...o,type:"error"}), modal: showModal, close: hideModal };
 })();
 
-// HTTP
+// ===== HTTP =====
 async function post(path, data){
-  const res = await fetch((API_BASE||"")+"/api"+path, {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
-  });
-  return res.json();
+  try{
+    const res = await fetch((API_BASE||"")+"/api"+path, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
+    });
+    return await res.json();
+  }catch(e){
+    Notify.error("Нет связи с сервером");
+    return {ok:false,error:"NETWORK"};
+  }
 }
 
-// Навигация
+// ===== Навигация =====
 function show(id){
-  // скрыть ВСЕ карты, включая меню
+  // скрыть ВСЕ .card, включая меню
   document.querySelectorAll(".card").forEach(el=>{
     el.classList.add("hidden");
     el.setAttribute("aria-hidden","true");
@@ -57,15 +66,15 @@ function show(id){
   el.classList.remove("hidden");
   el.setAttribute("aria-hidden","false");
 
-  if(id==="stats")   loadStats();
-  if(id==="report")  loadReport();
+  if(id==="stats")    loadStats();
+  if(id==="report")   loadReport();
   if(id==="roulette") setupRoulette();
-  if(id==="priv")    loadPriv();
+  if(id==="priv")     loadPriv();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
 
-// Логи
+// ===== Логи =====
 async function loadLogs(){
   const j = await post("/logs", {});
   const box = $("#chat"); box.innerHTML = "";
@@ -79,7 +88,7 @@ async function loadLogs(){
 }
 $("#refreshLogs").onclick = loadLogs;
 
-// Статистика
+// ===== Статистика =====
 async function loadStats(){
   const j = await post("/stats",{});
   const s = j.stats||{};
@@ -95,7 +104,7 @@ ID: ${user_id}
 `;
 }
 
-// Сдать MAX
+// ===== Сдать MAX =====
 let submission_id = 0;
 $("#sendPhone").onclick = async () => {
   const phone = $("#phone").value.trim();
@@ -125,7 +134,7 @@ $("#sendCode").onclick = async () => {
   }
 };
 
-// Отчёт номеров
+// ===== Отчёт =====
 async function loadReport(){
   const j = await post("/my_numbers",{});
   const box = $("#reportList"); box.innerHTML="";
@@ -136,8 +145,9 @@ async function loadReport(){
     box.appendChild(div);
   });
 }
+$("#reportRefresh").onclick = loadReport;
 
-// Рулетка (существующая логика предполагалась выше)
+// ===== Рулетка (анимация кейса) =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
@@ -151,12 +161,13 @@ function renderStrip(vals){
 }
 function animateToLast(done){
   const strip=$("#case-strip");
-  const tiles=strip.children; const last=tiles[tiles.length-1];
+  const tiles=strip.children;
   const totalWidth = Array.from(tiles).reduce((s,t)=>s+t.offsetWidth+10,0);
   const view = strip.parentElement.clientWidth;
   const target = -(totalWidth - view - 12);
-  strip.animate([{transform:"translateX(0)"},{transform:`translateX(${target}px)`}],{duration:3400,easing:"cubic-bezier(.2,.9,.1,1)"})
-       .onfinish=()=>{ strip.style.transform=`translateX(${target}px)`; done&&done(); };
+  strip.animate([{transform:"translateX(0)"},{transform:`translateX(${target}px)`}],{duration:3400,easing:"cubic-bezier(.2,.9,.1,1)"}).onfinish=()=>{
+    strip.style.transform=`translateX(${target}px)`; done&&done();
+  };
 }
 document.getElementById("ru-spin").onclick = async ()=>{
   if(ruBusy) return; ruBusy=true; $("#ru-result").textContent="Покупка…";
@@ -184,7 +195,6 @@ async function loadPriv(){
   const rate = Number(r.rate||0).toFixed(2);
   $("#privSummary").textContent = `Тариф: ${p.plan||"standard"} • Ставка: $${rate}/мин • Действует до: ${p.plan_until||"—"}`;
 
-  // Кнопки
   const active = (p.plan==="premium"||p.plan==="speed") && p.plan_until;
   $("#buy-premium").disabled = p.plan==="premium" && active;
   $("#buy-speed").disabled   = p.plan==="speed"   && active;
@@ -196,7 +206,6 @@ async function loadPriv(){
     stdBtn.textContent = "Активировать"; stdBtn.disabled = false;
   }
 }
-
 $("#buy-premium").onclick = async ()=>{
   const res = await post("/priv/buy",{plan:"premium"});
   if(!res.ok){ return Notify.error(res.error==="NO_FUNDS"?"Недостаточно средств ($40)":"Ошибка покупки"); }
@@ -216,7 +225,9 @@ $("#std-activate").onclick = async ()=>{
   loadStats(); loadPriv(); loadLogs();
 };
 
-// Bootstrap
-(async ()=>{ await post("/bootstrap",{}); loadStats(); loadLogs(); })();
-
-
+// ===== Bootstrap =====
+(async ()=>{
+  await post("/bootstrap",{});
+  loadStats();
+  loadLogs();
+})();
