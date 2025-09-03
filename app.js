@@ -199,69 +199,21 @@ async function loadPriv(){
   const isSpeed= p.plan==="speed"   && !!p.plan_until;
   const isStd  = !isPrem && !isSpeed;
 
-  // Premium
   const premPrice = $("#price-premium");
   const premBtn   = $("#buy-premium");
-  if(isPrem){
-    premPrice?.classList.add("hidden");
-    premBtn.textContent = "Активен";
-    premBtn.disabled = true;
-    premBtn.classList.add("btn-active");
-  }else{
-    premPrice?.classList.remove("hidden");
-    premBtn.textContent = "Купить";
-    premBtn.disabled = false;
-    premBtn.classList.remove("btn-active");
-  }
+  if(isPrem){ premPrice?.classList.add("hidden"); premBtn.textContent="Активен"; premBtn.disabled=true; premBtn.classList.add("btn-active"); }
+  else      { premPrice?.classList.remove("hidden"); premBtn.textContent="Купить"; premBtn.disabled=false; premBtn.classList.remove("btn-active"); }
 
-  // Speed
   const speedPrice = $("#price-speed");
   const speedBtn   = $("#buy-speed");
-  if(isSpeed){
-    speedPrice?.classList.add("hidden");
-    speedBtn.textContent = "Активен";
-    speedBtn.disabled = true;
-    speedBtn.classList.add("btn-active");
-  }else{
-    speedPrice?.classList.remove("hidden");
-    speedBtn.textContent = "Купить";
-    speedBtn.disabled = false;
-    speedBtn.classList.remove("btn-active");
-  }
+  if(isSpeed){ speedPrice?.classList.add("hidden"); speedBtn.textContent="Активен"; speedBtn.disabled=true; speedBtn.classList.add("btn-active"); }
+  else      { speedPrice?.classList.remove("hidden"); speedBtn.textContent="Купить"; speedBtn.disabled=false; speedBtn.classList.remove("btn-active"); }
 
-  // Standard
   const stdPrice = $("#price-standard");
   const stdBtn   = $("#std-activate");
-  if(isStd){
-    stdPrice?.classList.add("hidden");
-    stdBtn.textContent = "Активен";
-    stdBtn.disabled = true;
-    stdBtn.classList.add("btn-active");
-  }else{
-    stdPrice?.classList.remove("hidden");
-    stdBtn.textContent = "Активировать";
-    stdBtn.disabled = false;
-    stdBtn.classList.remove("btn-active");
-  }
+  if(isStd){ stdPrice?.classList.add("hidden"); stdBtn.textContent="Активный"; stdBtn.disabled=true; stdBtn.classList.add("btn-active"); }
+  else    { stdPrice?.classList.remove("hidden"); stdBtn.textContent="Активировать"; stdBtn.disabled=false; stdBtn.classList.remove("btn-active"); }
 }
-$("#buy-premium")?.addEventListener("click", async ()=>{
-  const res = await post("/priv/buy",{plan:"premium"});
-  if(!res.ok){ return Notify.error(res.error==="NO_FUNDS"?"Недостаточно средств ($40)":"Ошибка покупки"); }
-  Notify.success("Премиум активирован на 30 дней");
-  loadStats(); loadPriv(); loadLogs();
-});
-$("#buy-speed")?.addEventListener("click", async ()=>{
-  const res = await post("/priv/buy",{plan:"speed"});
-  if(!res.ok){ return Notify.error(res.error==="NO_FUNDS"?"Недостаточно средств ($30)":"Ошибка покупки"); }
-  Notify.success("Speed активирован на 30 дней");
-  loadStats(); loadPriv(); loadLogs();
-});
-$("#std-activate")?.addEventListener("click", async ()=>{
-  const res = await post("/priv/activate_standard",{});
-  if(!res.ok){ return Notify.error("Ошибка активации"); }
-  Notify.info(`Возврат: $${Number(res.refund||0).toFixed(2)}`);
-  loadStats(); loadPriv(); loadLogs();
-});
 
 (() => {
   const tg = window.Telegram?.WebApp;
@@ -300,6 +252,12 @@ $("#wdSend")?.addEventListener("click", async ()=>{
   $("#wdAmount").value = "";
   refreshWithdrawBalance();
   Notify.info("Заявка отправлена админам");
+});
+
+$("#wdCancel")?.addEventListener("click", async ()=>{
+  const res = await post("/withdraw_cancel",{});
+  if(res.ok){ Notify.info("Заявка отменена"); refreshWithdrawBalance(); }
+  else { Notify.error(res.error==="NO_PENDING" ? "Активной заявки нет" : "Не удалось отменить"); }
 });
 
 $("#wdCancel")?.addEventListener("click", async ()=>{
