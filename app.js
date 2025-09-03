@@ -1,17 +1,20 @@
-// Helpers
+// ===== Config =====
+// Если фронт = GitHub Pages, а бэкенд = Cloudflare Tunnel, укажи URL туннеля:
+const API_BASE = ""; // например: "https://your-subdomain.trycloudflare.com"
+
+// ===== Helpers =====
 const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
-function ripple(e){e.classList.add("rippling"); const r=e.getBoundingClientRect(); e.style.setProperty("--rx",(event.clientX-r.left)+"px"); e.style.setProperty("--ry",(event.clientY-r.top)+"px"); setTimeout(()=>e.classList.remove("rippling"),300)}
-document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target)})
+function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
+document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target,e)});
 
-// Telegram init
+// ===== Telegram WebApp =====
 const tg = window.Telegram?.WebApp; tg && tg.expand();
 const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
-const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // пусто = тот же хост, где запущен backend прокси/туннелем
 
-// Notify (из предыдущей версии)
+// ===== Notify (toast + modal) =====
 const Notify = (() => {
   const root = document.getElementById("notify-root");
   const modal = document.getElementById("notify-modal");
@@ -35,32 +38,45 @@ const Notify = (() => {
   return { toast, info:(m,o)=>toast(m,{...o,type:"info"}), success:(m,o)=>toast(m,{...o,type:"success"}), error:(m,o)=>toast(m,{...o,type:"error"}), modal: showModal, close: hideModal };
 })();
 
-// HTTP
+// ===== HTTP =====
 async function post(path, data){
-  const res = await fetch((API_BASE||"")+"/api"+path, {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
-  });
-  return res.json();
+  try{
+    const res = await fetch((API_BASE||"")+"/api"+path, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
+    });
+    return await res.json();
+  }catch(e){
+    Notify.error("Нет связи с сервером");
+    return {ok:false,error:"NETWORK"};
+  }
 }
 
-// Навигация
+// ===== Навигация (ровно один экран) =====
 function show(id){
-  document.querySelectorAll(".card").forEach(el=>{ if(el.id==="menu") return; el.classList.add("hidden"); el.setAttribute("aria-hidden","true"); });
+  document.querySelectorAll(".card").forEach(el=>{
+    el.classList.add("hidden");
+    el.setAttribute("aria-hidden","true");
+  });
   const el = (id==="menu") ? $("#menu") : $("#screen-"+id);
-  el.classList.remove("hidden"); el.setAttribute("aria-hidden","false");
-  if(id==="stats") loadStats();
-  if(id==="report") loadReport();
+  if(!el) return;
+  el.classList.remove("hidden");
+  el.setAttribute("aria-hidden","false");
+
+  if(id==="stats")    loadStats();
+  if(id==="report")   loadReport();
   if(id==="roulette") setupRoulette();
-  if(id==="priv") loadPriv();
+  if(id==="priv")     loadPriv();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
 
-// Логи
+// ===== Логи =====
 async function loadLogs(){
   const j = await post("/logs", {});
-  const box = $("#chat"); box.innerHTML = "";
+  const box = $("#chat"); if(!box) return;
+  box.innerHTML = "";
   (j.events||[]).forEach(e=>{
     const div = document.createElement("div");
     div.className = "bubble " + (e.role==="user"?"b-user":e.role==="admin"?"b-admin":"b-system");
@@ -69,9 +85,9 @@ async function loadLogs(){
   });
   box.scrollTop = box.scrollHeight;
 }
-$("#refreshLogs").onclick = loadLogs;
+$("#refreshLogs")?.addEventListener("click", loadLogs);
 
-// Статистика
+// ===== Статистика =====
 async function loadStats(){
   const j = await post("/stats",{});
   const s = j.stats||{};
@@ -84,12 +100,13 @@ ID: ${user_id}
 Всего заработано: ${Number(s.earned||0).toFixed(2)}
 Баланс: ${Number(s.balance||0).toFixed(2)}
 Рулетка: куплено $${Number(s.spent_roulette||0).toFixed(2)} • выигрыши $${Number(s.won_roulette||0).toFixed(2)}
+Тариф: ${s.plan||"standard"}${s.plan_until?` • до ${s.plan_until}`:""}
 `;
 }
 
-// Сдать MAX
+// ===== Сдать MAX =====
 let submission_id = 0;
-$("#sendPhone").onclick = async () => {
+$("#sendPhone")?.addEventListener("click", async () => {
   const phone = $("#phone").value.trim();
   if(!phone){ Notify.info("Введите номер"); $("#phone").focus(); return; }
   const j = await post("/submit_phone",{phone});
@@ -102,8 +119,8 @@ $("#sendPhone").onclick = async () => {
   } else {
     Notify.error("Ошибка отправки номера");
   }
-};
-$("#sendCode").onclick = async () => {
+});
+$("#sendCode")?.addEventListener("click", async () => {
   const ci=$("#code"); const code=ci.value.trim();
   if(!submission_id){ Notify.info("Сначала отправьте номер телефона"); return; }
   if(!code){ Notify.info("Введите код"); ci.focus(); return; }
@@ -115,9 +132,9 @@ $("#sendCode").onclick = async () => {
   } else {
     Notify.error("Ошибка отправки кода");
   }
-};
+});
 
-// Отчёт номеров
+// ===== Отчёт =====
 async function loadReport(){
   const j = await post("/my_numbers",{});
   const box = $("#reportList"); box.innerHTML="";
@@ -128,8 +145,9 @@ async function loadReport(){
     box.appendChild(div);
   });
 }
+$("#reportRefresh")?.addEventListener("click", loadReport);
 
-// Рулетка (существующая логика предполагалась выше)
+// ===== Рулетка: кейс-анимация =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
@@ -143,14 +161,15 @@ function renderStrip(vals){
 }
 function animateToLast(done){
   const strip=$("#case-strip");
-  const tiles=strip.children; const last=tiles[tiles.length-1];
+  const tiles=strip.children;
   const totalWidth = Array.from(tiles).reduce((s,t)=>s+t.offsetWidth+10,0);
   const view = strip.parentElement.clientWidth;
   const target = -(totalWidth - view - 12);
-  strip.animate([{transform:"translateX(0)"},{transform:`translateX(${target}px)`}],{duration:3400,easing:"cubic-bezier(.2,.9,.1,1)"})
-       .onfinish=()=>{ strip.style.transform=`translateX(${target}px)`; done&&done(); };
+  strip.animate([{transform:"translateX(0)"},{transform:`translateX(${target}px)`}],{duration:3400,easing:"cubic-bezier(.2,.9,.1,1)"}).onfinish=()=>{
+    strip.style.transform=`translateX(${target}px)`; done&&done();
+  };
 }
-document.getElementById("ru-spin").onclick = async ()=>{
+$("#ru-spin")?.addEventListener("click", async ()=>{
   if(ruBusy) return; ruBusy=true; $("#ru-result").textContent="Покупка…";
   const res = await post("/roulette_spin",{});
   if(!res.ok){
@@ -167,7 +186,7 @@ document.getElementById("ru-spin").onclick = async ()=>{
     ruBusy=false; loadStats(); loadLogs();
     Notify.info(`Выигрыш: $${Number(res.win).toFixed(2)}`);
   });
-};
+});
 
 // ===== Привилегии =====
 async function loadPriv(){
@@ -176,7 +195,6 @@ async function loadPriv(){
   const rate = Number(r.rate||0).toFixed(2);
   $("#privSummary").textContent = `Тариф: ${p.plan||"standard"} • Ставка: $${rate}/мин • Действует до: ${p.plan_until||"—"}`;
 
-  // Кнопки
   const active = (p.plan==="premium"||p.plan==="speed") && p.plan_until;
   $("#buy-premium").disabled = p.plan==="premium" && active;
   $("#buy-speed").disabled   = p.plan==="speed"   && active;
@@ -188,25 +206,28 @@ async function loadPriv(){
     stdBtn.textContent = "Активировать"; stdBtn.disabled = false;
   }
 }
-
-$("#buy-premium").onclick = async ()=>{
+$("#buy-premium")?.addEventListener("click", async ()=>{
   const res = await post("/priv/buy",{plan:"premium"});
   if(!res.ok){ return Notify.error(res.error==="NO_FUNDS"?"Недостаточно средств ($40)":"Ошибка покупки"); }
   Notify.success("Премиум активирован на 30 дней");
   loadStats(); loadPriv(); loadLogs();
-};
-$("#buy-speed").onclick = async ()=>{
+});
+$("#buy-speed")?.addEventListener("click", async ()=>{
   const res = await post("/priv/buy",{plan:"speed"});
   if(!res.ok){ return Notify.error(res.error==="NO_FUNDS"?"Недостаточно средств ($30)":"Ошибка покупки"); }
   Notify.success("Speed активирован на 30 дней");
   loadStats(); loadPriv(); loadLogs();
-};
-$("#std-activate").onclick = async ()=>{
+});
+$("#std-activate")?.addEventListener("click", async ()=>{
   const res = await post("/priv/activate_standard",{});
   if(!res.ok){ return Notify.error("Ошибка активации"); }
   Notify.info(`Возврат: $${Number(res.refund||0).toFixed(2)}`);
   loadStats(); loadPriv(); loadLogs();
-};
+});
 
-// Bootstrap
-(async ()=>{ await post("/bootstrap",{}); loadStats(); loadLogs(); })();
+// ===== Bootstrap =====
+(async ()=>{
+  await post("/bootstrap",{});
+  loadStats();
+  loadLogs();
+})();
