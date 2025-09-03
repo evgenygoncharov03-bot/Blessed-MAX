@@ -184,37 +184,40 @@ renderStrip(stripVals);
 $("#ru-result").textContent = "Крутится…";
 animateToWin(()=>{
   $("#ru-result").textContent =
-    `Выигрыш: $${Number(res.win).toFixed(2)} - Баланс: $${Number(res.balance).toFixed(2)}`;
+    `Выигрыш: $${Number(res.win).toFixed(2)} • Баланс: $${Number(res.balance).toFixed(2)}`;
   ruBusy = false; loadStats(); loadLogs();
   Notify.info(`Выигрыш: $${Number(res.win).toFixed(2)}`);
 });
 
 function animateToWin(done){
-	  const strip = $("#case-strip");
-	  const tiles = strip.children;
-	  if(!tiles.length) return;
-	  const last = tiles[tiles.length - 1];
+  const strip = $("#case-strip");
+  const tiles = strip.children;
+  if(!tiles.length) return;
 
-	  // суммарная ширина ленты с зазорами
-	  const totalWidth = Array.from(tiles).reduce((s,t)=> s + t.offsetWidth + 10, 0);
-	  const view = strip.parentElement.clientWidth;
-	  const lastW = last.offsetWidth;
+  const last = tiles[tiles.length - 1];
 
-	  // центр последней плитки в системе координат ленты
-	  const lastCenter = (totalWidth - lastW) + lastW / 2;
-	  // центр указателя — по центру вьюпорта
-	  const viewCenter = view / 2;
+  // размеры
+  const gap = 10; // как в CSS
+  const padLeft = parseFloat(getComputedStyle(strip).paddingLeft || "12") || 12;
+  const view = strip.parentElement.clientWidth;
 
-	  const target = -(lastCenter - viewCenter);
+  // суммарная ширина всех плиток + все зазоры
+  const totalTilesWidth = Array.from(tiles).reduce((s,t)=> s + t.offsetWidth + gap, 0);
+  // центр последней плитки в системе координат ЛЕНТЫ
+  const lastCenter = padLeft + (totalTilesWidth - gap - last.offsetWidth) + last.offsetWidth/2;
 
-	  strip.animate(
-		[{transform:"translateX(0)"},{transform:`translateX(${target}px)`}],
-		{duration:3400, easing:"cubic-bezier(.2,.9,.1,1)"}
-	  ).onfinish = () => {
-		strip.style.transform = `translateX(${target}px)`;
-		done && done();
-	  };
-	}
+  // хотим совместить lastCenter с центром видимой области
+  const viewCenter = view / 2;
+  const target = -(lastCenter - viewCenter);
+
+  strip.animate(
+    [{ transform: "translateX(0)" }, { transform: `translateX(${target}px)` }],
+    { duration: 3400, easing: "cubic-bezier(.2,.9,.1,1)" }
+  ).onfinish = () => {
+    strip.style.transform = `translateX(${target}px)`;
+    done && done();
+  };
+}
 
 
 // ===== Привилегии =====
@@ -303,3 +306,4 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
