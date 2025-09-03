@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ру">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -23,9 +23,7 @@
 
       <h2 style="margin:0 0 8px">LOG CHAT</h2>
       <div id="chat" class="chat"></div>
-      <div class="row">
-        <button id="refreshLogs">Обновить</button>
-      </div>
+      <div class="row"><button id="refreshLogs">Обновить</button></div>
     </div>
 
     <div id="screen-stats" class="card hidden" aria-hidden="true">
@@ -49,27 +47,27 @@
       <button class="back">Назад</button>
     </div>
 
+    <div id="screen-report" class="card hidden" aria-hidden="true">
+      <h2>Отчёт моих номеров</h2>
+      <div id="reportList"></div>
+      <div class="row"><button id="reportRefresh">Обновить</button><button class="back">Назад</button></div>
+    </div>
+
     <div id="todo" class="card hidden" aria-hidden="true">
       <h2>Скоро</h2>
       <button class="back">Назад</button>
     </div>
 
-    <!-- Кейсовая рулетка -->
     <div id="screen-roulette" class="card hidden" aria-hidden="true">
       <h2>Рулетка</h2>
       <div class="ru-info">Цена спина: $1</div>
-
-      <div class="case-wrap">
-        <div id="case-pointer"></div>
-        <div id="case-strip"></div>
-      </div>
-
+      <div class="case-wrap"><div id="case-pointer"></div><div id="case-strip"></div></div>
       <button id="ru-spin">Купить спин за $1</button>
       <div id="ru-result" class="ru-result">—</div>
       <button class="back">Назад</button>
     </div>
 
   </div>
-  <script src="./app.js?v=R3000"></script>
+  <script src="./app.js?v=R4001"></script>
 </body>
 </html>
