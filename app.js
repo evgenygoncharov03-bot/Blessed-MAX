@@ -1,6 +1,6 @@
 const tg = window.Telegram.WebApp; tg.expand(); tg.ready();
 
-const API_BASE = "https://YOUR_PUBLIC_HOST:8080/api"; // укажи свой публичный адрес
+const API_BASE = "https://cyprus-mp-snake-bristol.trycloudflare.com/api"; // укажи свой публичный адрес
 const user = tg.initDataUnsafe?.user || {};
 const user_id = user?.id;
 const username = user?.username || user?.first_name || "user";
@@ -165,3 +165,4 @@ document.addEventListener("click",(e)=>{
 /* --------- start --------- */
 show("menu");
 setupCase();
+
