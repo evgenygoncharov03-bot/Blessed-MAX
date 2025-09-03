@@ -1,8 +1,7 @@
 // ===== Config =====
-// Укажи базовый URL туннеля Cloudflare/другого прокси. БЕЗ /api в конце.
 const API_BASE = "https://genre-considers-medications-rapids.trycloudflare.com";
 
-// ===== Helpers =====
+// ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
@@ -14,7 +13,7 @@ const auth = tg?.initDataUnsafe?.user || {};
 const user_id = auth.id || window.USER_ID || 0;
 const username = auth.username || auth.first_name || "user";
 
-// ===== Notify (toast + modal) =====
+// ===== Notify =====
 const Notify = (() => {
   const root = document.getElementById("notify-root");
   const modal = document.getElementById("notify-modal");
@@ -39,13 +38,9 @@ const Notify = (() => {
 })();
 
 // ===== HTTP =====
-function buildApiUrl(path){
-  const base = (API_BASE||"").replace(/\/+$/,"");
-  return base + "/api" + path;
-}
 async function post(path, data){
   try{
-    const res = await fetch(buildApiUrl(path), {
+    const res = await fetch((API_BASE||"")+"/api"+path, {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
@@ -57,7 +52,7 @@ async function post(path, data){
   }
 }
 
-// ===== Навигация (ровно один экран) =====
+// ===== Навигация (всегда один экран) =====
 function show(id){
   document.querySelectorAll(".card").forEach(el=>{
     el.classList.add("hidden");
@@ -151,7 +146,7 @@ async function loadReport(){
 }
 $("#reportRefresh")?.addEventListener("click", loadReport);
 
-// ===== Рулетка: кейс-анимация =====
+// ===== Рулетка (кейс-лента) =====
 let ruReady=false, ruBusy=false;
 function setupRoulette(){ if(ruReady) return; ruReady=true; }
 function buildStrip(win, n=72){
@@ -229,15 +224,69 @@ $("#std-activate")?.addEventListener("click", async ()=>{
   loadStats(); loadPriv(); loadLogs();
 });
 
+(() => {
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
+  const $ = (q) => document.querySelector(q);
+  const toast = (s) => { try { notify(s); } catch { alert(s); } };
+
+  async function post(url, data) {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(Object.assign({initData}, data||{}))
+    });
+    return r.json();
+  }
+
+  // показать баланс на экране вывода
+  function refreshWithdrawBalance() {
+    post("/api/stats").then(res => {
+      if (res?.ok && res.stats) $("#wdBalance").textContent = (res.stats.balance ?? 0).toFixed(2);
+    }).catch(()=>{});
+  }
+
+  // навешай на кнопку "Вывод средств" из главного меню если у тебя есть роутинг по data-screen
+  const scr = $("#screen-withdraw");
+  if (scr) {
+    // когда экран показывают — обнови баланс
+    const obs = new MutationObserver(() => {
+      const hidden = scr.classList.contains("hidden") || scr.getAttribute("aria-hidden")==="true";
+      if (!hidden) refreshWithdrawBalance();
+    });
+    obs.observe(scr, { attributes:true, attributeFilter:["class","aria-hidden"] });
+
+    $("#wdSend").addEventListener("click", async () => {
+      const v = parseFloat($("#wdAmount").value.replace(",", "."));
+      if (!isFinite(v)) return toast("Введите сумму");
+      if (v < 5 || v > 100) return toast("Допустимо от $5 до $100");
+      const res = await post("/api/withdraw_request", { amount: v });
+      if (!res.ok) {
+        const e = res.error || "ERR";
+        if (e === "NO_FUNDS") return toast("Недостаточно средств");
+        if (e === "PENDING_EXISTS") return toast("У вас уже есть активная заявка");
+        if (e === "AMOUNT_RANGE") return toast("Сумма вне диапазона");
+        return toast("Ошибка: " + e);
+      }
+      $("#wdAmount").value = "";
+      refreshWithdrawBalance();
+      toast("Заявка отправлена админам");
+    });
+
+    $("#wdCancel").addEventListener("click", async () => {
+      const res = await post("/api/withdraw_cancel");
+      if (res.ok) { toast("Заявка отменена"); refreshWithdrawBalance(); }
+      else { toast(res.error === "NO_PENDING" ? "Активной заявки нет" : "Не удалось отменить"); }
+    });
+  }
+})();
+
 // ===== Bootstrap =====
 (async ()=>{
   await post("/bootstrap",{});
   loadStats();
   loadLogs();
 })();
-
-
-
 
 
 
