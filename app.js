@@ -1,5 +1,5 @@
 // ===== Config =====
-const API_BASE = "https://disco-systems-life-carmen.trycloudflare.com";
+const API_BASE = "https://suburban-warrant-yield-by.trycloudflare.com";
 
 // ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
@@ -306,6 +306,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
