@@ -39,17 +39,10 @@ const Notify = (() => {
 
 // ===== HTTP =====
 async function post(path, data){
-  const base = (window.API_BASE || "").replace(/\/$/,""); // ваш trycloudflare/домен
-  const url  = base + "/api" + path;                      // <-- ключевое
-  const tg   = window.Telegram?.WebApp;
-  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
-  const user_id  = new URLSearchParams(location.search).get("user_id") || window.USER_ID || null;
-  const username = new URLSearchParams(location.search).get("username") || window.USERNAME || "user";
-
-  const r = await fetch(url, {
+  const r = await fetch((API_BASE||"") + "/api" + path, {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ initData, user_id, username, ...(data||{}) })
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ initData: tg?.initData, user_id, username, ...(data||{}) })
   });
   return r.json();
 }
@@ -309,6 +302,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
