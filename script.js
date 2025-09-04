@@ -362,15 +362,17 @@ const PRIZES = [
   {v:1.20, icon:"💎", cls:"r-legend"},
   {v:1.30, icon:"💎", cls:"r-legend"}
 ];
-const RU_ITEM_W = 96; // keep in sync with CSS .case-item width
-const RU_REPEAT = 8;  // how many times to repeat strip for smooth cycles
+const RU_REPEAT = 8;
 let ruStripBuilt = false;
 
 function setupRouletteOnce() {
   if (rouletteReady) return;
   rouletteReady = true;
   buildRouletteStrip();
+  syncRuTicks();
   $("#ru-spin")?.addEventListener("click", spin);
+  window.addEventListener("resize", syncRuTicks, {passive:true});
+  window.addEventListener("orientationchange", () => setTimeout(syncRuTicks, 100));
 }
 
 function buildRouletteStrip() {
@@ -380,6 +382,21 @@ function buildRouletteStrip() {
   strip.innerHTML = new Array(RU_REPEAT).fill(chunk).join("");
   strip.style.transform = "translateX(0px)";
   ruStripBuilt = true;
+  syncRuTicks();
+}
+
+function getRuItemW() {
+  const el = document.querySelector("#case-strip .case-item");
+  if (!el) return 96;
+  const r = el.getBoundingClientRect();
+  return Math.max(48, Math.round(r.width || 96));
+}
+
+function syncRuTicks() {
+  const wrap = document.querySelector(".case-wrap");
+  if (!wrap) return;
+  const w = getRuItemW();
+  wrap.style.setProperty("--ru-item", w + "px");
 }
 
 async function spin() {
@@ -389,12 +406,10 @@ async function spin() {
   const btn = $("#ru-spin");
   if (!strip || !wrap) return;
 
-  // UI lock + visual shine
   btn.disabled = true;
   wrap.classList.add("spinning");
   setText(resBox, "Крутится…");
 
-  // Ask server
   let win = null, balance = null;
   try {
     const r = await post("/api/roulette_spin", {});
@@ -402,28 +417,25 @@ async function spin() {
     win = Number(r.win || 0);
     balance = Number(r.balance || 0);
   } catch (e) {
-    toast("Спин недоступен", "Пополните баланс или повторите позже");
-    if (F.debug) console.error(e);
+    toast("Спин недоступен", "Попробуйте позже");
+    if (F?.debug) console.error(e);
     wrap.classList.remove("spinning");
     btn.disabled = false;
     return;
   }
 
-  // Compute landing index inside our repeated strip
+  const itemW = getRuItemW();
   const idxBase = nearestPrizeIndex(PRIZES.map(p=>p.v), win);
-  const totalItems = PRIZES.length * RU_REPEAT;
-  const cycles = 7 + Math.floor(Math.random()*3); // 7..9 full cycles
+  const cycles = 7 + Math.floor(Math.random()*3); // 7..9
   const targetIndex = cycles * PRIZES.length + idxBase;
-  const target = targetIndex * RU_ITEM_W;
+  const target = targetIndex * itemW;
 
-  // Animate
-  const dur = 3200; // ms
+  const dur = 3200;
   const t0 = performance.now();
   strip.style.willChange = "transform";
 
   function anim(t) {
     const p = Math.min(1, (t - t0) / dur);
-    // smoother accel+decel with overshoot
     const eased = cubicOut(p);
     const x = -target * eased;
     strip.style.transform = `translateX(${x}px)`;
@@ -433,16 +445,17 @@ async function spin() {
   requestAnimationFrame(anim);
 
   function onStop() {
-    // tiny settle bounce
-    const settle = 60;
+    const settle = Math.min(60, Math.round(itemW * 0.6));
     strip.animate(
-      [{ transform: `translateX(${-target}px)` }, { transform: `translateX(${-(target - settle)}px)` }, { transform: `translateX(${-target}px)` }],
+      [{ transform: `translateX(${-target}px)` },
+       { transform: `translateX(${-(target - settle)}px)` },
+       { transform: `translateX(${-target}px)` }],
       { duration: 320, easing: "cubic-bezier(.2,1,.2,1)" }
     );
     setText(resBox, `Выигрыш: $${fmtMoney(win)}`);
     toast("Результат", `$${fmtMoney(win)} • Баланс $${fmtMoney(balance)}`);
-    refreshWithdrawBalance();
-    refreshLogs();
+    refreshWithdrawBalance?.();
+    refreshLogs?.();
     wrap.classList.remove("spinning");
     btn.disabled = false;
   }
@@ -459,7 +472,134 @@ function nearestPrizeIndex(arr, val) {
 
 function cubicOut(t) { const f = t - 1; return f*f*f + 1; }
 
-/* ====== Withdraw ====== */
+/* ====== *//* ====== Roulette ====== */
+let rouletteReady = false;
+const PRIZES = [
+  {v:0.10, icon:"🟦", cls:"r-cmn"},
+  {v:0.20, icon:"🟦", cls:"r-cmn"},
+  {v:0.30, icon:"🟪", cls:"r-uc"},
+  {v:0.40, icon:"🟦", cls:"r-cmn"},
+  {v:0.50, icon:"🟨", cls:"r-rare"},
+  {v:0.60, icon:"🟦", cls:"r-cmn"},
+  {v:0.70, icon:"🟪", cls:"r-uc"},
+  {v:0.80, icon:"⚡",  cls:"r-rare"},
+  {v:0.90, icon:"🟦", cls:"r-cmn"},
+  {v:1.00, icon:"💠", cls:"r-uc"},
+  {v:1.10, icon:"🎁", cls:"r-rare"},
+  {v:1.20, icon:"💎", cls:"r-legend"},
+  {v:1.30, icon:"💎", cls:"r-legend"}
+];
+const RU_REPEAT = 8;
+let ruStripBuilt = false;
+
+function setupRouletteOnce() {
+  if (rouletteReady) return;
+  rouletteReady = true;
+  buildRouletteStrip();
+  syncRuTicks();
+  $("#ru-spin")?.addEventListener("click", spin);
+  window.addEventListener("resize", syncRuTicks, {passive:true});
+  window.addEventListener("orientationchange", () => setTimeout(syncRuTicks, 100));
+}
+
+function buildRouletteStrip() {
+  const strip = $("#case-strip");
+  if (!strip || ruStripBuilt) return;
+  const chunk = PRIZES.map(p => `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`).join("");
+  strip.innerHTML = new Array(RU_REPEAT).fill(chunk).join("");
+  strip.style.transform = "translateX(0px)";
+  ruStripBuilt = true;
+  syncRuTicks();
+}
+
+function getRuItemW() {
+  const el = document.querySelector("#case-strip .case-item");
+  if (!el) return 96;
+  const r = el.getBoundingClientRect();
+  return Math.max(48, Math.round(r.width || 96));
+}
+
+function syncRuTicks() {
+  const wrap = document.querySelector(".case-wrap");
+  if (!wrap) return;
+  const w = getRuItemW();
+  wrap.style.setProperty("--ru-item", w + "px");
+}
+
+async function spin() {
+  const wrap = $(".case-wrap");
+  const strip = $("#case-strip");
+  const resBox = $("#ru-result");
+  const btn = $("#ru-spin");
+  if (!strip || !wrap) return;
+
+  btn.disabled = true;
+  wrap.classList.add("spinning");
+  setText(resBox, "Крутится…");
+
+  let win = null, balance = null;
+  try {
+    const r = await post("/api/roulette_spin", {});
+    if (!r?.ok) throw new Error("bad");
+    win = Number(r.win || 0);
+    balance = Number(r.balance || 0);
+  } catch (e) {
+    toast("Спин недоступен", "Попробуйте позже");
+    if (F?.debug) console.error(e);
+    wrap.classList.remove("spinning");
+    btn.disabled = false;
+    return;
+  }
+
+  const itemW = getRuItemW();
+  const idxBase = nearestPrizeIndex(PRIZES.map(p=>p.v), win);
+  const cycles = 7 + Math.floor(Math.random()*3); // 7..9
+  const targetIndex = cycles * PRIZES.length + idxBase;
+  const target = targetIndex * itemW;
+
+  const dur = 3200;
+  const t0 = performance.now();
+  strip.style.willChange = "transform";
+
+  function anim(t) {
+    const p = Math.min(1, (t - t0) / dur);
+    const eased = cubicOut(p);
+    const x = -target * eased;
+    strip.style.transform = `translateX(${x}px)`;
+    if (p < 1) requestAnimationFrame(anim);
+    else onStop();
+  }
+  requestAnimationFrame(anim);
+
+  function onStop() {
+    const settle = Math.min(60, Math.round(itemW * 0.6));
+    strip.animate(
+      [{ transform: `translateX(${-target}px)` },
+       { transform: `translateX(${-(target - settle)}px)` },
+       { transform: `translateX(${-target}px)` }],
+      { duration: 320, easing: "cubic-bezier(.2,1,.2,1)" }
+    );
+    setText(resBox, `Выигрыш: $${fmtMoney(win)}`);
+    toast("Результат", `$${fmtMoney(win)} • Баланс $${fmtMoney(balance)}`);
+    refreshWithdrawBalance?.();
+    refreshLogs?.();
+    wrap.classList.remove("spinning");
+    btn.disabled = false;
+  }
+}
+
+function nearestPrizeIndex(arr, val) {
+  let best = 0, diff = Infinity;
+  arr.forEach((v, i) => {
+    const d = Math.abs(v - val);
+    if (d < diff) { diff = d; best = i; }
+  });
+  return best;
+}
+
+function cubicOut(t) { const f = t - 1; return f*f*f + 1; }
+
+/* ====== *//* ====== Withdraw ====== */
 async function refreshWithdrawBalance() {
   try {
     const r = await post("/api/stats", {});
