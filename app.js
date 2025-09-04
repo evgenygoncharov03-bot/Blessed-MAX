@@ -1,17 +1,28 @@
 // ===== Config =====
-const API_BASE = "https://hindu-root-impressed-importance.trycloudflare.com";
+const API_BASE = (window.API_BASE || "https://hindu-root-impressed-importance.trycloudflare.com").replace(/\/$/,"");
+
+// ===== Telegram WebApp / User =====
+const tg = window.Telegram?.WebApp; tg && tg.expand();
+const auth = tg?.initDataUnsafe?.user || {};
+const qp = new URLSearchParams(location.search);
+const user_id = auth.id || Number(qp.get("user_id")) || window.USER_ID || 0;
+const username = auth.username || auth.first_name || qp.get("username") || "user";
+
+// ===== HTTP =====
+async function post(path, data){
+  const r = await fetch(API_BASE + "/api" + path, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ initData: tg?.initData, user_id, username, ...(data||{}) })
+  });
+  return r.json();
+}
 
 // ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
 function escapeHtml(s){return (s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function ripple(e,ev){e.classList.add("rippling");const r=e.getBoundingClientRect();e.style.setProperty("--rx",(ev.clientX-r.left)+"px");e.style.setProperty("--ry",(ev.clientY-r.top)+"px");setTimeout(()=>e.classList.remove("rippling"),300)}
 document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.target,e)});
-
-// ===== Telegram WebApp =====
-const tg = window.Telegram?.WebApp; tg && tg.expand();
-const auth = tg?.initDataUnsafe?.user || {};
-const user_id = auth.id || window.USER_ID || 0;
-const username = auth.username || auth.first_name || "user";
 
 // ===== Notify =====
 const Notify = (() => {
@@ -36,16 +47,6 @@ const Notify = (() => {
   function hideModal(){ modal.classList.add("hidden"); modal.setAttribute("aria-hidden","true"); }
   return { toast, info:(m,o)=>toast(m,{...o,type:"info"}), success:(m,o)=>toast(m,{...o,type:"success"}), error:(m,o)=>toast(m,{...o,type:"error"}), modal: showModal, close: hideModal };
 })();
-
-// ===== HTTP =====
-async function post(path, data){
-  const r = await fetch((API_BASE||"") + "/api" + path, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ initData: tg?.initData, user_id, username, ...(data||{}) })
-  });
-  return r.json();
-}
 
 // ===== Навигация (всегда один экран) =====
 function show(id){
@@ -242,21 +243,6 @@ async function loadPriv(){
   else    { stdPrice?.classList.remove("hidden"); stdBtn.textContent="Активировать"; stdBtn.disabled=false; stdBtn.classList.remove("btn-active"); }
 }
 
-(() => {
-  const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
-  const $ = (q) => document.querySelector(q);
-  const toast = (s) => { try { notify(s); } catch { alert(s); } };
-
-  async function post(url, data) {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(Object.assign({initData}, data||{}))
-    });
-    return r.json();
-  }
-
   // показать баланс на экране вывода
 window.refreshWithdrawBalance = refreshWithdrawBalance;
 async function refreshWithdrawBalance(){
@@ -302,6 +288,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
