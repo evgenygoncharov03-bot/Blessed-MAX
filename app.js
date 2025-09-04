@@ -11,17 +11,24 @@ const username = auth.username || auth.first_name || qp.get("username") || "user
 
 // ===== HTTP =====
 async function post(path, data) {
-  const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
-  const user_id  = Number(new URLSearchParams(location.search).get("user_id")) || undefined;
-  const username = new URLSearchParams(location.search).get("username") || undefined;
+  try {
+    const tg = window.Telegram?.WebApp;
+    const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
+    const qp = new URLSearchParams(location.search);
+    const user_id  = qp.get("user_id") !== null ? Number(qp.get("user_id")) : undefined; // сохраняем 0
+    const username = qp.get("username") ?? undefined;
 
-  const r = await fetch(api(path), {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(Object.assign({ initData, user_id, username }, data || {}))
-  });
-  return r.json();
+    const r = await fetch(api(path), {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(Object.assign({ initData, user_id, username }, data || {}))
+    });
+    if(!r.ok) return { ok:false, error:`HTTP_${r.status}` };
+    const j = await r.json().catch(()=>null);
+    return j ?? { ok:false, error:"BAD_JSON" };
+  } catch(e){
+    return { ok:false, error:"NETWORK" };
+  }
 }
 
 // ===== Shortcuts =====
@@ -32,25 +39,30 @@ document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") ripple(e.t
 
 // ===== Notify =====
 const Notify = (() => {
-  const root = document.getElementById("notify-root");
+  const root  = document.getElementById("notify-root");
   const modal = document.getElementById("notify-modal");
   const mTitle = document.getElementById("notify-title");
   const mCont  = document.getElementById("notify-content");
   const mClose = document.getElementById("notify-close");
-  mClose.onclick = () => hideModal();
+  if (mClose) mClose.onclick = () => hideModal();
 
   function toast(msg, {title="", type="info", timeout=2500} = {}){
+    if(!root){ alert((title? title+": " : "") + msg); return {close:()=>{}}; }
     const el = document.createElement("div");
     el.className = `notif ${type}`;
     el.innerHTML = `<div>${title ? `<div class="title">${escapeHtml(title)}</div>`:""}<div class="msg">${escapeHtml(msg)}</div></div><button class="x" aria-label="Закрыть">×</button>`;
-    el.querySelector(".x").onclick = () => remove();
+    const remove = ()=>{ if(el.parentNode) el.parentNode.removeChild(el); };
+    el.querySelector(".x").onclick = remove;
     root.appendChild(el);
-    let t = setTimeout(remove, timeout);
-    function remove(){ clearTimeout(t); if(el.parentNode) el.parentNode.removeChild(el); }
-    return {close: remove};
+    const t = setTimeout(remove, timeout);
+    return {close:()=>{clearTimeout(t); remove();}};
   }
-  function showModal({title="Сообщение", html="", onClose=null}={}){ mTitle.textContent=title; mCont.innerHTML=html; modal.classList.remove("hidden"); modal.setAttribute("aria-hidden","false"); mClose.onclick=()=>{hideModal(); onClose&&onClose();}; }
-  function hideModal(){ modal.classList.add("hidden"); modal.setAttribute("aria-hidden","true"); }
+  function showModal({title="Сообщение", html="", onClose=null}={}){
+    if(!modal) return toast("Нет контейнера модального окна",{type:"error"});
+    mTitle.textContent=title; mCont.innerHTML=html; modal.classList.remove("hidden"); modal.setAttribute("aria-hidden","false");
+    mClose.onclick=()=>{hideModal(); onClose&&onClose();};
+  }
+  function hideModal(){ if(modal){ modal.classList.add("hidden"); modal.setAttribute("aria-hidden","true"); } }
   return { toast, info:(m,o)=>toast(m,{...o,type:"info"}), success:(m,o)=>toast(m,{...o,type:"success"}), error:(m,o)=>toast(m,{...o,type:"error"}), modal: showModal, close: hideModal };
 })();
 
@@ -235,19 +247,24 @@ async function loadPriv(){
 
   const premPrice = $("#price-premium");
   const premBtn   = $("#buy-premium");
-  if(isPrem){ premPrice?.classList.add("hidden"); premBtn.textContent="Активен"; premBtn.disabled=true; premBtn.classList.add("btn-active"); }
-  else      { premPrice?.classList.remove("hidden"); premBtn.textContent="Купить"; premBtn.disabled=false; premBtn.classList.remove("btn-active"); }
+  if (premBtn) {
+    if(isPrem){ premPrice?.classList.add("hidden"); premBtn.textContent="Активен"; premBtn.disabled=true; premBtn.classList.add("btn-active"); }
+    else      { premPrice?.classList.remove("hidden"); premBtn.textContent="Купить"; premBtn.disabled=false; premBtn.classList.remove("btn-active"); }
+  }
 
   const speedPrice = $("#price-speed");
   const speedBtn   = $("#buy-speed");
-  if(isSpeed){ speedPrice?.classList.add("hidden"); speedBtn.textContent="Активен"; speedBtn.disabled=true; speedBtn.classList.add("btn-active"); }
-  else      { speedPrice?.classList.remove("hidden"); speedBtn.textContent="Купить"; speedBtn.disabled=false; speedBtn.classList.remove("btn-active"); }
-
+  if (speedBtn) {
+    if(isSpeed){ speedPrice?.classList.add("hidden"); speedBtn.textContent="Активен"; speedBtn.disabled=true; speedBtn.classList.add("btn-active"); }
+    else       { speedPrice?.classList.remove("hidden"); speedBtn.textContent="Купить"; speedBtn.disabled=false; speedBtn.classList.remove("btn-active"); }
+  }
+  
   const stdPrice = $("#price-standard");
   const stdBtn   = $("#std-activate");
-  if(isStd){ stdPrice?.classList.add("hidden"); stdBtn.textContent="Активный"; stdBtn.disabled=true; stdBtn.classList.add("btn-active"); }
-  else    { stdPrice?.classList.remove("hidden"); stdBtn.textContent="Активировать"; stdBtn.disabled=false; stdBtn.classList.remove("btn-active"); }
-}
+  if (stdBtn) {
+    if(isStd){ stdPrice?.classList.add("hidden"); stdBtn.textContent="Активный"; stdBtn.disabled=true; stdBtn.classList.add("btn-active"); }
+    else     { stdPrice?.classList.remove("hidden"); stdBtn.textContent="Активировать"; stdBtn.disabled=false; stdBtn.classList.remove("btn-active"); }
+  }
 
   // показать баланс на экране вывода
 window.refreshWithdrawBalance = refreshWithdrawBalance;
@@ -294,6 +311,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
