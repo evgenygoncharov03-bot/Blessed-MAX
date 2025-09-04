@@ -1,87 +1,78 @@
 // script.js — Telegram WebApp фронт для Blessed MAX
 // Под твой сервер: POST JSON на /api/*, CORS включён на бэке
-;(function(){
+;(function () {
   'use strict';
 
   // === Конфиг ===
-  const API_BASE = 'https://earning-attitude-hunt-wrote.trycloudflare.com'.replace(/\/$/,'');
+  const API_BASE = 'https://earning-attitude-hunt-wrote.trycloudflare.com'.replace(/\/$/, '');
   const tg = window.Telegram?.WebApp;
   if (tg) tg.expand();
 
-  // initData из Telegram или параметры dev-режима
-  const qp = new URLSearchParams(location.search);
-  const initData = tg?.initData || qp.get('initData') || '';
-  const userUnsafe = tg?.initDataUnsafe?.user || {};
-  const USER_ID = userUnsafe.id || Number(qp.get('user_id')) || 1;
-  const USERNAME = userUnsafe.username || userUnsafe.first_name || qp.get('username') || 'user';
-
-  // === Утилиты DOM ===
-  const $  = (s, r=document) => r.querySelector(s);
-  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+  // === Контекст пользователя (из Telegram или query) ===
+  const qs = (s, r = document) => r.querySelector(s);
+  const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
   const byId = (id) => document.getElementById(id);
 
-  // Нотифай
+  const params = new URLSearchParams(location.search);
+  const initData = tg?.initData || params.get('initData') || '';
+  const u = tg?.initDataUnsafe?.user || {};
+  const USER_ID = u.id || Number(params.get('user_id')) || 1;
+  const USERNAME = u.username || u.first_name || params.get('username') || 'user';
+
+  // === Сервис: тосты и модалка (без ошибок, если вёрстки нет) ===
   const notifyRoot = byId('notify-root');
-  function toast(type, title, msg, ms=3000){
-    if(!notifyRoot) return;
+  function toast(type, title, msg, ms = 3000) {
+    if (!notifyRoot) return;
     const el = document.createElement('div');
-    el.className = `notif ${type||'info'}`;
-    el.innerHTML = `<div><div class="title">${title||'Сообщение'}</div><div class="msg">${msg||''}</div></div><button class="x" aria-label="Закрыть">✕</button>`;
+    el.className = `notif ${type || 'info'}`;
+    el.innerHTML = `<div><div class="title">${title || 'Сообщение'}</div><div class="msg">${msg || ''}</div></div><button class="x">✕</button>`;
     notifyRoot.appendChild(el);
-    const hide = ()=>{ el.remove(); };
-    el.querySelector('.x').onclick = hide;
-    setTimeout(hide, ms);
-  }
-  function modal(title, content){
-    const dlg = byId('notify-modal'); if(!dlg) return;
-    byId('notify-title').textContent = title||'';
-    byId('notify-content').textContent = content||'';
-    dlg.classList.remove('hidden');
-    byId('notify-close').onclick = ()=> dlg.classList.add('hidden');
+    const close = () => el.remove();
+    el.querySelector('.x').onclick = close;
+    setTimeout(close, ms);
   }
 
-  // Риппл подсветка на кнопках
-  document.addEventListener('pointermove',(e)=>{
-    const b = e.target?.closest('button'); if(!b) return;
+  // === Вспышка под курсором на кнопках ===
+  document.addEventListener('pointermove', (e) => {
+    const b = e.target?.closest('button'); if (!b) return;
     const r = b.getBoundingClientRect();
-    b.style.setProperty('--rx', (e.clientX-r.left)+'px');
-    b.style.setProperty('--ry', (e.clientY-r.top)+'px');
+    b.style.setProperty('--rx', (e.clientX - r.left) + 'px');
+    b.style.setProperty('--ry', (e.clientY - r.top) + 'px');
   });
 
-  // === HTTP ===
-  async function post(path, data={}){
-    const url = API_BASE + (path.startsWith('/')?path:'/'+path);
+  // === HTTP: simple POST без preflight (text/plain) ===
+  async function post(path, data = {}) {
+    const url = API_BASE + (path.startsWith('/') ? path : '/' + path);
     const body = initData ? { ...data, initData } : { ...data, user_id: USER_ID, username: USERNAME };
     const res = await fetch(url, {
       method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type':'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify(body),
-      credentials: 'omit',
+      // credentials: 'omit' — по умолчанию
     });
-    let j=null;
-    try{ j = await res.json(); }catch(e){}
-    if(!res.ok || !j || j.ok === false){
-      const err = (j && (j.error||j.message)) || `HTTP ${res.status}`;
+    let json = null;
+    try { json = await res.json(); } catch (_) {}
+    if (!res.ok || !json || json.ok === false) {
+      const err = (json && (json.error || json.message)) || `HTTP ${res.status}`;
       throw new Error(err);
     }
-    return j;
+    return json;
   }
 
-  // Быстрый чек доступности API
-  async function checkApi(){
-    try{
-      const r = await post('/api/bootstrap', {}); // сервер заполнит stats и username
-      console.info('[API] OK', r);
+  // === Проверка соединения (лог в консоль, без алертов) ===
+  async function checkApi() {
+    try {
+      const r = await post('/api/bootstrap', {});
+      console.info('[API OK]', API_BASE, r?.username || '');
       return true;
-    }catch(e){
-      console.error('[API] FAIL', e);
-      toast('error','API недоступно','Проверь API_BASE и туннель', 4000);
+    } catch (e) {
+      console.warn('[API FAIL]', API_BASE, String(e.message || e));
       return false;
     }
   }
+  window.checkApi = checkApi; // по запросу из консоли
 
-  // === Навигация ===
+  // === Экраны ===
   const SCREENS = {
     menu: byId('menu'),
     stats: byId('screen-stats'),
@@ -92,9 +83,9 @@
     withdraw: byId('screen-withdraw'),
     contests: byId('screen-contests'),
   };
-  function show(id){
-    Object.values(SCREENS).forEach(el=> el && el.classList.add('hidden'));
-    (SCREENS[id]||SCREENS.menu)?.classList.remove('hidden');
+  function show(id) {
+    Object.values(SCREENS).forEach((el) => el && el.classList.add('hidden'));
+    (SCREENS[id] || SCREENS.menu)?.classList.remove('hidden');
   }
   $$('#menu [data-screen]').forEach(b=> b.addEventListener('click', ()=>{
     const s = b.getAttribute('data-screen');
