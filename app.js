@@ -1,6 +1,9 @@
 // ===== Config =====
 const API_BASE = (window.API_BASE || "https://projectors-attractive-kick-sky.trycloudflare.com").replace(/\/$/,'');
-const api = (p) => API_BASE + (p.startsWith('/') ? p : '/' + p);
+function api(p){
+  p = p.startsWith('/') ? p : '/' + p;
+  return API_BASE + '/api' + p;     // <-- добавляем префикс /api
+}
 
 // ===== Telegram WebApp / User =====
 const tg = window.Telegram?.WebApp; tg && tg.expand();
@@ -311,6 +314,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
