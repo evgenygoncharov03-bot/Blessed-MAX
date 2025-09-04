@@ -1,10 +1,3 @@
-/* Blessed MAX — Responsive UI (PC + Android + iPhone)
-   Styles for index.html + script.js.
-   Includes: dark theme, grid menu, cards, forms, chat log, contests, roulette,
-   privileges plans, notifications, modal, and custom scrollbars.
-   Widths and class names match the uploaded markup.
-*/
-
 /* ===== CSS Reset / Base ===== */
 * { box-sizing: border-box; }
 :root {
@@ -326,7 +319,7 @@ input:focus, select:focus, textarea:focus {
   .case-wrap { margin: 8px 0 6px; }
 }
 
-/* ===== Notifications/* ===== Notifications */ ===== */
+/* ===== Notifications/* ===== Notifications */
 .notify-root {
   position: fixed;
   inset-block-start: 12px;
@@ -422,3 +415,46 @@ input:focus, select:focus, textarea:focus {
   height: 1px; background: linear-gradient(90deg, transparent, #2a3a58, transparent);
   margin: 12px 0;
 }
+
+/* ==== Plans: active button state ==== */
+.plan button.active{
+  background: linear-gradient(180deg, #0f2a19, #0d2416);
+  border-color: #1e7a3a;
+  color: #b9f6cf;
+  cursor: default;
+  box-shadow: inset 0 0 0 1px #22c55e55;
+}
+
+/* ==== Stats grid layout ==== */
+#statsBox{
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr;
+  gap: 8px 12px;
+  background: #0b1426;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: var(--font-ui);
+  white-space: normal;
+}
+#statsBox .k{ color: var(--muted-2); font-weight: 700; }
+#statsBox .v{ font-weight: 800; }
+
+/* ==== Chat wrapping fix ==== */
+.log{
+  grid-template-columns: minmax(160px, auto) minmax(70px, auto) 1fr;
+}
+.log .txt{
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* ==== Modal actions ==== */
+.notify-actions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+.notify-actions .notify-btn{ width: auto; }
