@@ -71,23 +71,23 @@ const Notify = (() => {
 
 // ===== Навигация (всегда один экран) =====
 function show(id){
-  document.querySelectorAll(".card").forEach(el=>{
-    el.classList.add("hidden");
-    el.setAttribute("aria-hidden","true");
-  });
-  const el = (id==="menu") ? $("#menu") : $("#screen-"+id);
+  document.querySelectorAll(".card").forEach(el=>{ el.classList.add("hidden"); el.setAttribute("aria-hidden","true"); });
+  const el = (id==="menu") ? document.getElementById("menu") : document.getElementById("screen-"+id);
   if(!el) return;
-  el.classList.remove("hidden");
-  el.setAttribute("aria-hidden","false");
-
-  if(id==="stats")    loadStats();
-  if(id==="report")   loadReport();
+  el.classList.remove("hidden"); el.setAttribute("aria-hidden","false");
+  if(id==="stats") loadStats();
+  if(id==="report") loadReport();
+  if(id==="priv")  loadPriv();
   if(id==="roulette") setupRoulette();
-  if(id==="priv")     loadPriv();
   if(id==="withdraw") refreshWithdrawBalance();
 }
 document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>show(b.dataset.screen));
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show("menu"));
+
+document.addEventListener("DOMContentLoaded", async ()=>{
+  try { await post("/bootstrap",{}); } catch {}
+  loadLogs?.(); loadStats?.();
+});
 
 // ===== Логи =====
 async function loadLogs(){
@@ -314,6 +314,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
