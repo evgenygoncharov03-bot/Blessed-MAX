@@ -1,8 +1,6 @@
 // script.js — Blessed MAX WebApp front-end
 ;(function(){
   'use strict';
-
-  // Telegram WebApp / Auth
   const tg = window.Telegram?.WebApp; if (tg) tg.expand();
   const qp = new URLSearchParams(location.search);
   const initData = tg?.initData || qp.get('initData') || '';
@@ -10,20 +8,18 @@
   const USER_ID = authUser.id || Number(qp.get('user_id')) || 0;
   const USERNAME = authUser.username || authUser.first_name || qp.get('username') || 'user';
 
-  // ===== API_BASE: из ?api=..., иначе из localStorage. Управление через window.setApiBase() =====
   const paramBase = qp.get('api');
   const storedBase = localStorage.getItem('api_base') || '';
-  let API_BASE = 'https://earning-attitude-hunt-wrote.trycloudflare.com';
+  let API_BASE = storedBase || '';
+  if (paramBase) { API_BASE = paramBase.replace(/\/$/,''); localStorage.setItem('api_base', API_BASE); }
+  if (!API_BASE) console.warn('[API] set with setApiBase("https://<tunnel>") or add ?api=');
+  window.setApiBase = (u)=>{ if(!/^https?:\/\//i.test(u)) return console.error('bad url'); API_BASE=u.replace(/\/$/,''); localStorage.setItem('api_base',API_BASE); console.info('[API]=',API_BASE); checkApiConnectivity(); };
 
-  if (paramBase) {
-    API_BASE = paramBase.replace(/\/$/, '');
-    localStorage.setItem('api_base', API_BASE);
-    console.info('[API] from ?api=', API_BASE);
-  } else if (storedBase) {
-    API_BASE = storedBase.replace(/\/$/, '');
-    console.info('[API] from localStorage =', API_BASE);
-  } else {
-    console.warn('[API] base not set. Use setApiBase("https://<тunnel>") or add ?api=');
+  const $=s=>document.querySelector(s); const byId=id=>document.getElementById(id);
+
+  async function fetchTO(input, init={}, ms=6000){
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort('timeout'), ms);
+    try{ return await fetch(input, {...init, signal:ctrl.signal}); } finally{ clearTimeout(t); }
   }
 
   // Позволяет задать/сменить базу без правки кода
@@ -36,45 +32,34 @@
   };
 
   // ===== Базовый POST =====
-  async function post(path, data = {}) {
-    if (!API_BASE) throw new Error('API_BASE_EMPTY');
-    const url = API_BASE + (path.startsWith('/') ? path : '/' + path);
+  async function post(path, data={}){
+    if(!API_BASE) throw new Error('API_BASE_EMPTY');
+    const url = API_BASE + (path.startsWith('/')?path:'/'+path);
     const body = initData ? { ...data, initData } : { ...data, user_id: USER_ID, username: USERNAME };
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body: JSON.stringify(body) });
+    if(!r.ok) throw new Error('HTTP '+r.status);
     return r.json();
   }
 
   // ===== Connectivity check (лог в консоль) =====
-  async function checkApiConnectivity() {
-    const base = (API_BASE || '').replace(/\/$/, '');
-    if (!base) { console.warn('[API CHECK] API_BASE пуст'); return { ok:false, reason:'EMPTY_BASE' }; }
-    const url = base + '/api/bootstrap';
-
-    async function fetchTO(input, init = {}, ms = 5000) {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort('timeout'), ms);
-      try { return await fetch(input, { ...init, signal: ctrl.signal }); }
-      finally { clearTimeout(t); }
+  async function checkApiConnectivity(){
+    if(!API_BASE){ console.warn('[API CHECK] EMPTY'); return; }
+    const ping = API_BASE + '/api/ping';
+    try{
+      const r1 = await fetchTO(ping, { method:'GET', cache:'no-store' }, 4000);
+      if(!r1.ok){ console.error('[API CHECK] GET /api/ping →', r1.status); return; }
+      const j1 = await r1.json(); console.info('[API CHECK] ping ok', j1);
+    }catch(e){
+      console.error('[API CHECK] GET /api/ping failed →', e); return;
     }
-
-    const t0 = performance.now();
-    try {
-      const pre = await fetchTO(url, { method:'OPTIONS' }, 4000);
-      if (!pre.ok) { console.error(`[API CHECK] OPTIONS ${url} → HTTP ${pre.status}`); return { ok:false, step:'OPTIONS', status:pre.status }; }
-    } catch (e) {
-      console.error(`[API CHECK] OPTIONS ${url} → ${e}`); return { ok:false, step:'OPTIONS', err:String(e) };
-    }
-
-    try {
-      const body = initData ? { initData } : { user_id: USER_ID || 1, username: USERNAME || 'user' };
-      const r = await fetchTO(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }, 6000);
-      const dt = Math.round(performance.now() - t0);
-      let js = null; try { js = await r.clone().json(); } catch {}
-      if (r.ok && js && js.ok) { console.info(`[API OK] ${base} • ${dt}ms`); return { ok:true, ms:dt, status:r.status }; }
-      console.warn(`[API FAIL] ${base} • HTTP ${r.status} • body=${JSON.stringify(js)}`); return { ok:false, step:'POST', status:r.status, body:js };
-    } catch (e) {
-      console.error(`[API DOWN] ${base} • ${e}`); return { ok:false, step:'POST', err:String(e) };
+    try{
+      const url = API_BASE + '/api/bootstrap';
+      const body = initData ? { initData } : { user_id: USER_ID||1, username: USERNAME||'user' };
+      const r2 = await fetchTO(url, { method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body: JSON.stringify(body) }, 6000);
+      const j2 = await r2.json();
+      if (r2.ok && j2?.ok) console.info('[API OK] bootstrap ok'); else console.warn('[API FAIL]', r2.status, j2);
+    }catch(e){
+      console.error('[API DOWN] POST /api/bootstrap →', e);
     }
   }
   window.checkApiConnectivity = checkApiConnectivity;
@@ -108,15 +93,21 @@
 
   // Hover glow
   document.addEventListener('pointermove',(e)=>{ if(e.target?.tagName==='BUTTON'){ const r=e.target.getBoundingClientRect(); e.target.style.setProperty('--rx', (e.clientX-r.left)+'px'); e.target.style.setProperty('--ry',(e.clientY-r.top)+'px'); }});
-
+  
   // Bootstrap + автопроверка
-  checkApiConnectivity();
   async function bootstrap(){
     try{
       const r = await post('/api/bootstrap');
-      updateStats(r.stats||{}); loadLogs(); if (tg) document.documentElement.classList.add('tg-compact');
-    }catch(e){ console.error(e); Notify.error('API недоступно. Проверь API_BASE и туннель.'); }
+      console.log('bootstrap', r);
+      byId('statsBox') && (byId('statsBox').textContent = JSON.stringify(r.stats||{}, null, 2));
+    }catch(e){
+      console.error('bootstrap error', e);
+      alert('API недоступно. Проверь API_BASE и туннель.');
+    }
   }
+
+  // автопроверка при старте
+  checkApiConnectivity(); bootstrap();
 
   function updateStats(st){
     const box = byId('statsBox');
@@ -273,4 +264,3 @@
   bootstrap();
   showScreen('menu');
 })();
-
