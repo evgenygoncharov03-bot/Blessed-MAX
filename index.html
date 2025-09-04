@@ -10,7 +10,6 @@
 <body>
 <div id="app" class="app">
 
-  <!-- Главное меню -->
   <div id="menu" class="card">
     <h1>Главное меню</h1>
     <div class="grid" style="margin-bottom:12px">
@@ -28,14 +27,12 @@
     <div class="row"><button id="refreshLogs">Обновить</button></div>
   </div>
 
-  <!-- Статистика -->
   <div id="screen-stats" class="card hidden" aria-hidden="true">
     <h2>Статистика</h2>
     <pre id="statsBox">Загрузка…</pre>
     <button class="back">Назад</button>
   </div>
 
-  <!-- Сдать MAX -->
   <div id="screen-submit" class="card hidden" aria-hidden="true">
     <h2>Сдать MAX</h2>
     <label>Номер телефона
@@ -51,7 +48,6 @@
     <button class="back">Назад</button>
   </div>
 
-  <!-- Отчёт -->
   <div id="screen-report" class="card hidden" aria-hidden="true">
     <h2>Отчёт моих номеров</h2>
     <div id="reportList"></div>
@@ -61,7 +57,6 @@
     </div>
   </div>
 
-  <!-- Привилегии -->
   <div id="screen-priv" class="card hidden" aria-hidden="true">
     <h2>Привилегии</h2>
     <div id="privSummary" class="priv-summary">Тариф: — • Ставка: — • Действует до: —</div>
@@ -105,7 +100,6 @@
     <div class="row"><button class="back">Назад</button></div>
   </div>
 
-  <!-- Рулетка -->
   <div id="screen-roulette" class="card hidden" aria-hidden="true">
     <h2>Рулетка</h2>
     <div class="ru-info">Цена спина: $1</div>
@@ -115,14 +109,12 @@
     <button class="back">Назад</button>
   </div>
 
-  <!-- Конкурсы -->
   <div id="screen-contests" class="card hidden" aria-hidden="true">
     <h2>Конкурсы</h2>
     <div id="contestList" class="contest-list"></div>
     <div class="row"><button class="back">Назад</button></div>
   </div>
 
-  <!-- Notify -->
   <div id="notify-root" class="notify-root" aria-live="polite"></div>
   <div id="notify-modal" class="notify-modal hidden" aria-hidden="true">
     <div class="notify-backdrop"></div>
@@ -133,7 +125,6 @@
     </div>
   </div>
 
-  <!-- Вывод средств -->
   <div id="screen-withdraw" class="card hidden" aria-hidden="true">
     <h2>Вывод средств</h2>
     <div class="muted" style="margin:6px 0 12px">Доступно: <span id="wdBalance">—</span> $</div>
@@ -152,11 +143,6 @@
 
 </div>
 
-<!-- ЕДИНЫЙ источник истины для API_BASE -->
-<script>
-</script>
-<script src="./script.js?v=R12"></script>
+<script src="./script.js?v=R15"></script>
 </body>
-
 </html>
-
