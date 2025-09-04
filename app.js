@@ -1,5 +1,5 @@
 // ===== Config =====
-const API_BASE = (window.API_BASE || "https://pct-smart-commitments-introductory.trycloudflare.com").replace(/\/$/,"");
+const API_BASE = (window.API_BASE || "https://projectors-attractive-kick-sky.trycloudflare.com").replace(/\/$/,"");
 
 // ===== Telegram WebApp / User =====
 const tg = window.Telegram?.WebApp; tg && tg.expand();
@@ -288,6 +288,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
