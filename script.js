@@ -7,6 +7,8 @@
   // Telegram WebApp / Auth
   const tg = window.Telegram?.WebApp; if (tg) tg.expand();
   const qp = new URLSearchParams(location.search);
+  const apiParam = qp.get('api');
+  if (apiParam) { window.API_BASE = apiParam; console.info('[API] from ?api=', apiParam); }
   const initData = tg?.initData || qp.get('initData') || '';
   const authUser = tg?.initDataUnsafe?.user || {};
   const USER_ID = authUser.id || Number(qp.get('user_id')) || 0;
@@ -398,3 +400,4 @@ window.checkApiConnectivity = checkApiConnectivity;
   bootstrap();
   showScreen('menu');
 })();
+
