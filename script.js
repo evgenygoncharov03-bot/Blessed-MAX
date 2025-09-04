@@ -7,7 +7,7 @@ const tg = window.Telegram?.WebApp || null;
 if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
-const API_BASE = "https://sunset-babe-carrier-largely.trycloudflare.com";
+const API_BASE = "https://merchant-yorkshire-conspiracy-wanting.trycloudflare.com";
 
 const initData = tg?.initData || qp.get("initData") || "";
 const authUser = tg?.initDataUnsafe?.user || null;
@@ -579,3 +579,4 @@ document.addEventListener("keydown", (e) => {
     goto("menu");
   }
 });
+
