@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Blessed MAX</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div id="app" class="app">
+
+  <div id="menu" class="card">
+    <h1>Главное меню</h1>
+    <div class="grid" style="margin-bottom:12px">
+      <button data-screen="stats">📊 Статистика</button>
+      <button data-screen="submit">📱 Сдать MAX</button>
+      <button data-screen="report">📑 Отчёт моих номеров</button>
+      <button data-screen="priv">⭐ Привилегии</button>
+      <button data-screen="roulette">🎰 Рулетка</button>
+      <button data-screen="withdraw">💳 Вывод средств</button>
+      <button data-screen="contests">🏆 Конкурсы</button>
+    </div>
+
+    <h2 style="margin:0 0 8px">LOG CHAT</h2>
+    <div id="chat" class="chat"></div>
+    <div class="row"><button id="refreshLogs">Обновить</button></div>
+  </div>
+
+  <div id="screen-stats" class="card hidden" aria-hidden="true">
+    <h2>Статистика</h2>
+    <pre id="statsBox">Загрузка…</pre>
+    <button class="back">Назад</button>
+  </div>
+
+  <div id="screen-submit" class="card hidden" aria-hidden="true">
+    <h2>Сдать MAX</h2>
+    <label>Номер телефона
+      <input id="phone" inputmode="tel" autocomplete="tel" placeholder="+7..." />
+    </label>
+    <button id="sendPhone">Отправить</button>
+    <div id="codePanel" class="hidden" aria-hidden="true">
+      <label>Код из SMS
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+      </label>
+      <button id="sendCode">Отправить код</button>
+    </div>
+    <button class="back">Назад</button>
+  </div>
+
+  <div id="screen-report" class="card hidden" aria-hidden="true">
+    <h2>Отчёт моих номеров</h2>
+    <div id="reportList"></div>
+    <div class="row">
+      <button id="reportRefresh">Обновить</button>
+      <button class="back">Назад</button>
+    </div>
+  </div>
+
+  <div id="screen-priv" class="card hidden" aria-hidden="true">
+    <h2>Привилегии</h2>
+    <div id="privSummary" class="priv-summary">Тариф: — • Ставка: — • Действует до: —</div>
+    <div class="plans">
+      <div class="plan">
+        <div class="plan-badge">1-й приоритет</div>
+        <div class="plan-title">Премиум тариф</div>
+        <ul class="plan-feats">
+          <li>Ставка: <b>$0.25</b> за минуту</li>
+          <li>Номера уходят первыми</li>
+          <li>Срок: 30 дней</li>
+        </ul>
+        <div class="plan-price" id="price-premium">$40</div>
+        <button id="buy-premium">Купить</button>
+      </div>
+
+      <div class="plan">
+        <div class="plan-badge">2-й приоритет</div>
+        <div class="plan-title">Speed тариф</div>
+        <ul class="plan-feats">
+          <li>Ставка: <b>$0.20</b> за минуту</li>
+          <li>После Премиум</li>
+          <li>Срок: 30 дней</li>
+        </ul>
+        <div class="plan-price" id="price-speed">$30</div>
+        <button id="buy-speed">Купить</button>
+      </div>
+
+      <div class="plan">
+        <div class="plan-badge muted">Базовый</div>
+        <div class="plan-title">Стандарт тариф</div>
+        <ul class="plan-feats">
+          <li>Ставка: <b>$0.18</b> за минуту</li>
+          <li>3-й приоритет</li>
+        </ul>
+        <div class="plan-price" id="price-standard">—</div>
+        <button id="std-activate">Активный</button>
+        <div class="plan-note">При возврате на «Стандарт» вернём 45% от непросиженной части.</div>
+      </div>
+    </div>
+    <div class="row"><button class="back">Назад</button></div>
+  </div>
+
+  <div id="screen-roulette" class="card hidden" aria-hidden="true">
+    <h2>Рулетка</h2>
+    <div class="ru-info">Цена спина: $1</div>
+    <div class="case-wrap"><div id="case-pointer"></div><div id="case-strip"></div></div>
+    <button id="ru-spin">Купить спин за $1</button>
+    <div id="ru-result" class="ru-result">—</div>
+    <button class="back">Назад</button>
+  </div>
+
+  <div id="screen-contests" class="card hidden" aria-hidden="true">
+    <h2>Конкурсы</h2>
+    <div id="contestList" class="contest-list"></div>
+    <div class="row"><button class="back">Назад</button></div>
+  </div>
+
+  <div id="notify-root" class="notify-root" aria-live="polite"></div>
+  <div id="notify-modal" class="notify-modal hidden" aria-hidden="true">
+    <div class="notify-backdrop"></div>
+    <div class="notify-dialog">
+      <div class="notify-title" id="notify-title">Сообщение</div>
+      <div class="notify-content" id="notify-content"></div>
+      <button id="notify-close" class="notify-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <div id="screen-withdraw" class="card hidden" aria-hidden="true">
+    <h2>Вывод средств</h2>
+    <div class="muted" style="margin:6px 0 12px">Доступно: <span id="wdBalance">—</span> $</div>
+    <label>Сумма (5–100$)
+      <input id="wdAmount" type="number" inputmode="decimal" min="5" max="100" step="0.01" placeholder="10.00" />
+    </label>
+    <div class="row">
+      <button id="wdSend">Вывести</button>
+      <button class="back">Назад</button>
+    </div>
+    <div class="muted" style="margin-top:8px">Заявка уходит админам.</div>
+    <div class="row" style="margin-top:6px">
+      <button id="wdCancel" class="secondary">Отменить активную заявку</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="./script.js?v=R20"></script>
+</body>
+</html>
