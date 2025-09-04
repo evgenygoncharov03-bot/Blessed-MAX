@@ -1,10 +1,16 @@
-/*  White Nights / MAX WebApp — Black–Blue WOW UI (v3)
-    Drop‑in upgrade for v2. Focused on a11y, perf, and consistency.
-    Usage: <link rel="stylesheet" href="max-black-blue.css">  */
+/*  White Nights / MAX WebApp — Black–Blue WOW UI (v3.1, responsive)
+    Drop-in upgrade for v3. Usage: <link rel="stylesheet" href="max-black-blue.css">  */
 
 /* ===== System & Theme Tokens ===== */
 :root{
   color-scheme: dark light;
+  /* fluid type + spacing */
+  --fs: clamp(14px, 1.2vw + 0.6rem, 16px);
+  --fs-sm: clamp(12px, 1vw + 0.35rem, 14px);
+  --fs-lg: clamp(18px, 1.6vw + 0.8rem, 22px);
+  --pad: clamp(10px, 1.4vw, 16px);
+  --gap: clamp(8px, 1.2vw, 14px);
+
   --bg:    color-mix(in srgb, #070c14 92%, black);
   --bg2:   #0a1220;
   --panel: color-mix(in srgb, #0c1220 78%, #0b0f19);
@@ -18,10 +24,10 @@
   --focus:#3b82f6; --focus-ring:0 0 0 3px #3b82f633;
   --inset:inset 0 1px 0 #ffffff1a;
   --blur:12px;
-  --sbw:10px; /* scrollbar width */
+  --sbw:10px;
   --speed-fast:.12s; --speed:.2s; --speed-slow:.32s;
 }
-/* Telegram theme variable bridges (no‑ops if absent) */
+/* Telegram theme bridges */
 :root{
   --tg-bg: var(--tg-theme-bg-color, var(--bg));
   --tg-text: var(--tg-theme-text-color, var(--text));
@@ -44,7 +50,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{
-  color:var(--tg-text); font:15px/1.45 system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  color:var(--tg-text); font:var(--fs)/1.45 system-ui, Segoe UI, Roboto, Arial, sans-serif;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   background:
     radial-gradient(1200px 800px at 110% -10%, #1b2a42 0%, transparent 55%),
@@ -52,11 +58,28 @@ body{
     linear-gradient(180deg, var(--tg-bg), var(--bg2));
   background-attachment: fixed, fixed, fixed;
   animation:bgMove 18s ease-in-out infinite alternate;
+  -webkit-text-size-adjust:100%;
 }
 @keyframes bgMove{to{background-position:12% 0, 88% 100%, 0 0}}
 
-.app{max-width:980px;margin-inline:auto;padding:16px;min-height:100vh;height:100vh;display:flex;flex-direction:column;gap:14px;animation:fadeIn var(--speed-fast) ease-out}
-@supports(height:100svh){.app{min-height:100svh;height:100svh;padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(16px + env(safe-area-inset-bottom))}}
+.app{
+  max-width:min(1100px, 96vw);
+  margin-inline:auto;
+  padding:var(--pad);
+  min-height:100vh; height:100vh;
+  display:flex; flex-direction:column; gap:var(--gap);
+  animation:fadeIn var(--speed-fast) ease-out;
+}
+/* mobile viewport safety */
+@supports(height: 100svh){
+  .app{
+    min-height:100svh;height:100svh;
+    padding-top:calc(var(--pad) + env(safe-area-inset-top));
+    padding-bottom:calc(var(--pad) + env(safe-area-inset-bottom));
+    padding-left:calc(var(--pad) + env(safe-area-inset-left));
+    padding-right:calc(var(--pad) + env(safe-area-inset-right));
+  }
+}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}}
 
 .hidden{display:none!important}
@@ -64,24 +87,25 @@ body{
 
 /* ===== Headings ===== */
 h1,h2{margin:0 0 10px}
-h1{font-size:22px;letter-spacing:.2px}
-h2{font-size:18px;color:var(--muted)}
+h1{font-size:var(--fs-lg);letter-spacing:.2px}
+h2{font-size:clamp(16px, 1.2vw + .6rem, 18px);color:var(--muted)}
 
 /* ===== Grid ===== */
 .grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
 @media (min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:520px){.grid{grid-template-columns:1fr}}
+@media (min-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:600px){.grid{grid-template-columns:1fr}}
 
 /* ===== Card / Panel ===== */
 .card{
   position:relative; overflow:hidden;
   background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-  padding:16px; display:flex; flex-direction:column; gap:12px;
+  padding:var(--pad); display:flex; flex-direction:column; gap:var(--gap);
   box-shadow:var(--shadow), var(--inset);
   backdrop-filter:saturate(120%) blur(var(--blur));
   -webkit-backdrop-filter:saturate(120%) blur(var(--blur));
   animation:cardIn var(--speed) cubic-bezier(.2,.8,.2,1) both;
-  contain:content; /* isolate heavy effects */
+  contain:content;
 }
 .card.compact{padding:12px;border-radius:var(--radius-sm)}
 .card::before{
@@ -93,8 +117,14 @@ h2{font-size:18px;color:var(--muted)}
 @keyframes shine{50%{opacity:.35; transform:translate3d(2px,0,0)}}
 .card .back{position:sticky;bottom:0;z-index:1;margin-top:8px}
 
+/* compact on very small phones */
+@media (max-width:380px){
+  :root{ --radius:12px; --radius-sm:9px }
+  .card{padding:12px}
+}
+
 /* ===== Inputs ===== */
-label{display:block;margin:8px 0 6px;color:var(--muted);font-size:13px}
+label{display:block;margin:8px 0 6px;color:var(--muted);font-size:var(--fs-sm)}
 :where(input,button,select,textarea){
   inline-size:100%; border-radius:var(--radius-sm);
   border:1px solid var(--border);
@@ -102,6 +132,7 @@ label{display:block;margin:8px 0 6px;color:var(--muted);font-size:13px}
   background:linear-gradient(180deg,#0f1728,#0c1424);
   padding:12px 14px;
   transition:transform var(--speed-fast) ease, box-shadow var(--speed) ease, border-color var(--speed) ease, background var(--speed) ease, filter var(--speed) ease;
+  min-height:44px; /* thumb-friendly */
 }
 input::placeholder,textarea::placeholder{color:var(--muted-2)}
 :where(input,select,textarea):focus-visible{outline:none;border-color:var(--focus);box-shadow:var(--focus-ring);background:#0f1b30}
@@ -113,7 +144,8 @@ button{
   font-weight:900; letter-spacing:.2px; color:var(--tg-button-text);
   background:linear-gradient(135deg,var(--acc1),var(--acc2));
   box-shadow:0 10px 26px #000b, 0 0 0 0 var(--glow);
-  min-height:42px; touch-action:manipulation;
+  min-height:44px; touch-action:manipulation; border-radius:var(--radius-sm);
+  font-size:clamp(13px, 1vw + .4rem, 15px);
 }
 button:hover{transform:translateY(-1px); box-shadow:0 14px 30px #000b, 0 0 0 8px var(--glow)}
 button:active{transform:translateY(0)}
@@ -128,7 +160,7 @@ button.outline{background:transparent;color:var(--tg-text);border:1px solid var(
 .btn-glow{animation:glowPulse 2.4s ease-in-out infinite}
 @keyframes glowPulse{50%{filter:drop-shadow(0 0 12px #3aa7ff55)}}
 
-/* Cursor highlight (works even without JS) */
+/* Cursor highlight */
 button::after{
   content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
   background:radial-gradient(200px 200px at var(--rx,50%) var(--ry,50%), #fff3, transparent 42%);
@@ -162,7 +194,7 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
 #case-pointer::after{content:"";position:absolute;inset-block:0;inset-inline-start:-1px;inline-size:2px;background:linear-gradient(180deg,transparent,#4fa0ff,transparent);box-shadow:0 0 10px #4fa0ff88}
 .ru-result{margin-top:8px;font-size:16px}
 
-/* ===== Notifications / Modal — responsive + proper close button ===== */
+/* ===== Notifications / Modal ===== */
 .notify-root{
   position:fixed; z-index:1000; pointer-events:none;
   inset-block-start:calc(12px + env(safe-area-inset-top));
@@ -172,7 +204,7 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
   overflow:auto; scrollbar-gutter:stable;
 }
 .notif{
-  pointer-events:auto; position:relative; overflow:hidden;  /* clip btn inside */
+  pointer-events:auto; position:relative; overflow:hidden;
   inline-size:min(92vw, 420px); min-inline-size:260px; max-inline-size:520px;
 
   display:grid; grid-template-columns:1fr auto; align-items:start; gap:8px 12px;
@@ -188,9 +220,8 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
 .notif .msg{grid-column:1/2; font-size:13px; opacity:.85}
 
 .notif .x{
-  /* inside the frame, touch-friendly */
   grid-column:2/3; grid-row:1/2; align-self:start; justify-self:end;
-  position:static; inline-size:32px; block-size:32px; border-radius:10px;
+  position:static; inline-size:36px; block-size:36px; border-radius:10px;
   background:#0b1324; color:#9fb1cc; cursor:pointer; display:grid; place-items:center;
   border:1px solid var(--border-strong); font-weight:800;
 }
@@ -201,7 +232,7 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
 .notif.success{border-color:#1f6d3a;background:linear-gradient(180deg,#0e1f17,#0b1511)}
 .notif.error{border-color:#7b2c2c;background:linear-gradient(180deg,#1a1010,#120b0b)}
 
-.notify-root .notif + .notif{margin-top:0} /* gap already on root */
+.notify-root .notif + .notif{margin-top:0}
 
 /* Modal */
 .notify-modal{position:fixed;inset:0;z-index:1001;display:grid;place-items:center}
@@ -210,8 +241,8 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
 @keyframes fadeBackdrop{from{opacity:0}}
 .notify-dialog{
   position:relative; z-index:1;
-  inline-size:min(92vw, 480px);
-  background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px;
+  inline-size:min(92vw, 520px);
+  background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:var(--pad);
   box-shadow:0 18px 50px #000a, inset 0 1px 0 #fff2; animation:popIn var(--speed) ease-out both;
 }
 @keyframes popIn{from{opacity:0; transform:translateY(10px) scale(.98)}}
@@ -220,12 +251,13 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
 @media (max-width:600px){
   .notify-root{
     inset:auto 0 calc(12px + env(safe-area-inset-bottom)) 0;
-    align-items:center; /* centered toasts */
+    align-items:center;
   }
   .notif{inline-size:clamp(280px, 94vw, 520px)}
 }
-/* Coarse pointers (phones): soften hover */
+/* Coarse pointers */
 @media (pointer:coarse){
+  button:hover{transform:none; box-shadow:0 10px 26px #000b}
   .notif .x:hover{filter:none}
 }
 
@@ -271,6 +303,13 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
 .scroll::-webkit-scrollbar-thumb:hover, .card::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#2563eb,#3b82f6)}
 *{scrollbar-width:thin; scrollbar-color:#244aa3 #0a111b}
 
+/* ===== Rotation and small landscape handling ===== */
+@media (max-height:520px) and (orientation:landscape){
+  .app{gap:8px}
+  .card{padding:10px}
+  .notify-root{inset-block-start:8px}
+}
+
 /* ===== Motion/contrast preferences ===== */
 @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important; scroll-behavior:auto!important} }
 @media (prefers-contrast: more){
@@ -279,7 +318,12 @@ button[data-loading="true"]::before{content:""; position:absolute; inset:0; bord
   .card{box-shadow:0 0 0 2px #0006}
 }
 
-/* ===== Touch heuristic: soften heavy hover effects on coarse pointers ===== */
+/* ===== Touch heuristic ===== */
 @media (pointer: coarse){
   button:hover{transform:none; box-shadow:0 10px 26px #000b}
+}
+
+/* ===== iOS Safari safe fallback ===== */
+@supports (-webkit-touch-callout: none){
+  .app{min-height:-webkit-fill-available}
 }
