@@ -1,5 +1,5 @@
 // ===== Config =====
-const API_BASE = "https://suburban-warrant-yield-by.trycloudflare.com";
+const API_BASE = "https://hindu-root-impressed-importance.trycloudflare.com";
 
 // ===== Shortcuts =====
 const $ = sel => document.querySelector(sel);
@@ -307,6 +307,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
