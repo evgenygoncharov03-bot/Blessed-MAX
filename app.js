@@ -1,5 +1,5 @@
 /// ===== Config =====
-const API_BASE = (window.API_BASE || "https://projectors-attractive-kick-sky.trycloudflare.com").replace(/\/$/,'');
+const API_BASE = (window.API_BASE || "https://moms-pocket-lou-heritage.trycloudflare.com").replace(/\/$/,'');
 function api(p){
   p = p.startsWith('/') ? p : '/' + p;
   return API_BASE + '/api' + p;     // <-- добавляем префикс /api
@@ -314,3 +314,4 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
