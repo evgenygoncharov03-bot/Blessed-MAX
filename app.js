@@ -39,17 +39,19 @@ const Notify = (() => {
 
 // ===== HTTP =====
 async function post(path, data){
-  try{
-    const res = await fetch((API_BASE||"")+"/api"+path, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ initData: tg?.initData, user_id, username, ...data })
-    });
-    return await res.json();
-  }catch(e){
-    Notify.error("Нет связи с сервером");
-    return {ok:false,error:"NETWORK"};
-  }
+  const base = (window.API_BASE || "").replace(/\/$/,""); // ваш trycloudflare/домен
+  const url  = base + "/api" + path;                      // <-- ключевое
+  const tg   = window.Telegram?.WebApp;
+  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
+  const user_id  = new URLSearchParams(location.search).get("user_id") || window.USER_ID || null;
+  const username = new URLSearchParams(location.search).get("username") || window.USERNAME || "user";
+
+  const r = await fetch(url, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ initData, user_id, username, ...(data||{}) })
+  });
+  return r.json();
 }
 
 // ===== Навигация (всегда один экран) =====
@@ -307,6 +309,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
