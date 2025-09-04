@@ -7,7 +7,7 @@ const tg = window.Telegram?.WebApp || null;
 if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
-const API_BASE = "https://parade-methodology-javascript-philip.trycloudflare.com";
+const API_BASE = "https://sunset-babe-carrier-largely.trycloudflare.com";
 
 const initData = tg?.initData || qp.get("initData") || "";
 const authUser = tg?.initDataUnsafe?.user || null;
@@ -141,7 +141,7 @@ async function bootstrap() {
     const r = await post("/api/bootstrap", {});
     if (r?.ok) {
       S.stats = r.stats || {};
-      setText($("#statsBox"), prettyStats(S.stats));
+      html($("#statsBox"), prettyStats(S.stats));
       await refreshLogs();
       await refreshPriv(); // also picks up prices
       await refreshWithdrawBalance();
@@ -153,29 +153,33 @@ async function bootstrap() {
 }
 
 /* ====== Stats ====== */
-function prettyStats(st) {
-  if (!st) return "Нет данных.";
-  const lines = [
-    `Пользователь: ${st.username || USER.username}`,
-    `Баланс: $${fmtMoney(st.balance)}`,
-    `Успехов: ${st.success_count ?? 0} • Провалов: ${st.fail_count ?? 0}`,
-    `Заработано: $${fmtMoney(st.earned)}`,
-    `Рулетка: потрачено $${fmtMoney(st.spent_roulette)} • выиграно $${fmtMoney(st.won_roulette)}`,
-    `Тариф: ${st.plan || "standard"} • старт: ${st.plan_started || "—"} • до: ${st.plan_until || "—"}`,
-    `С первых пор: ${st.first_seen || "—"}`,
+
+function prettyStats(st){
+  if (!st) return `<div class="muted">Нет данных</div>`;
+  const rows = [
+    ["Пользователь", st.username || USER.username],
+    ["Баланс", `$${fmtMoney(st.balance)}`],
+    ["Успехи / Провалы", `${st.success_count ?? 0} / ${st.fail_count ?? 0}`],
+    ["Заработано", `$${fmtMoney(st.earned)}`],
+    ["Рулетка", `потрачено $${fmtMoney(st.spent_roulette)} • выиграно $${fmtMoney(st.won_roulette)}`],
+    ["Тариф", `${st.plan || "standard"}`],
+    ["Старт тарифа", `${st.plan_started || "—"}`],
+    ["Действует до", `${st.plan_until || "—"}`],
+    ["С первых пор", `${st.first_seen || "—"}`],
   ];
-  return lines.join("\n");
+  return rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div>`).join("");
 }
+
 
 async function refreshStats() {
   try {
     const r = await post("/api/stats", {});
     if (r?.ok) {
       S.stats = r.stats || {};
-      setText($("#statsBox"), prettyStats(S.stats));
+      html($("#statsBox"), prettyStats(S.stats));
     }
   } catch (e) {
-    setText($("#statsBox"), "Ошибка загрузки статистики.");
+    html($("#statsBox"), `<div class="err">Ошибка загрузки статистики</div>`);
     if (F.debug) console.error(e);
   }
 }
@@ -300,6 +304,28 @@ async function refreshPriv() {
     setText($("#price-speed"), `$${fmtMoney(prices.speed)}`);
     const summary = `Тариф: ${p.plan || "—"} • Ставка: $${fmtMoney(rate)} • Действует до: ${p.plan_until || "—"}`;
     setText($("#privSummary"), summary);
+
+    const active = (p.plan || "").toLowerCase();
+    const bp = $("#buy-premium");
+    const bs = $("#buy-speed");
+    const std = $("#std-activate");
+
+    function setPlanBtn(btn, isActive, price){
+      if (!btn) return;
+      if (isActive){
+        btn.textContent = "Активирован";
+        btn.disabled = true;
+        btn.classList.add("active");
+      }else{
+        btn.textContent = `Купить за $${fmtMoney(price)}`;
+        btn.disabled = false;
+        btn.classList.remove("active");
+      }
+    }
+    setPlanBtn(bp, active === "premium", prices.premium);
+    setPlanBtn(bs, active === "speed", prices.speed);
+    if (std) std.textContent = active === "standard" ? "Активный" : "Активировать";
+    
   } catch (e) {
     setText($("#privSummary"), "Ошибка загрузки тарифов");
     if (F.debug) console.error(e);
@@ -391,6 +417,8 @@ async function spin() {
 
   // UI lock + visual shine
   btn.disabled = true;
+  btn.dataset._label = btn.textContent;
+  btn.textContent = "Крутится…";
   wrap.classList.add("spinning");
   setText(resBox, "Крутится…");
 
@@ -406,6 +434,7 @@ async function spin() {
     if (F.debug) console.error(e);
     wrap.classList.remove("spinning");
     btn.disabled = false;
+    if (btn.dataset._label) btn.textContent = btn.dataset._label;
     return;
   }
 
@@ -445,6 +474,7 @@ async function spin() {
     refreshLogs();
     wrap.classList.remove("spinning");
     btn.disabled = false;
+    if (btn.dataset._label) btn.textContent = btn.dataset._label;
   }
 }
 
@@ -466,7 +496,7 @@ async function refreshWithdrawBalance() {
     if (r?.ok) {
       S.stats = r.stats || S.stats;
       setText($("#wdBalance"), fmtMoney(S.stats?.balance || 0));
-      setText($("#statsBox"), prettyStats(S.stats));
+      html($("#statsBox"), prettyStats(S.stats));
     }
   } catch {}
 }
@@ -579,5 +609,35 @@ document.addEventListener("keydown", (e) => {
     goto("menu");
   }
 });
+/* Modal confirm that returns a Promise<boolean> */
+function confirmModal(title, content, okText="Купить", cancelText="Отмена"){
+  const dlg = $("#notify-modal");
+  const titleEl = $("#notify-title");
+  const contentEl = $("#notify-content");
+  const closeBtn = $("#notify-close");
+  const actionsId = "notify-actions";
+  // Build actions
+  const actions = document.createElement("div");
+  actions.id = actionsId;
+  actions.className = "notify-actions";
+  actions.innerHTML = `<button class="notify-btn secondary" id="notify-cancel">${escapeHtml(cancelText)}</button>
+                       <button class="notify-btn" id="notify-ok">${escapeHtml(okText)}</button>`;
+  titleEl.textContent = title;
+  contentEl.textContent = content;
+  contentEl.appendChild(actions);
+  show(dlg);
+  closeBtn.style.display = "none";
 
-
+  return new Promise((resolve)=>{
+    const onCancel = ()=>{ cleanup(); resolve(false); };
+    const onOk = ()=>{ cleanup(); resolve(true); };
+    $("#notify-cancel").addEventListener("click", onCancel, {once:true});
+    $("#notify-ok").addEventListener("click", onOk, {once:true});
+    $(".notify-backdrop").addEventListener("click", onCancel, {once:true});
+    function cleanup(){
+      hide(dlg);
+      closeBtn.style.display = "";
+      actions.remove();
+    }
+  });
+}
