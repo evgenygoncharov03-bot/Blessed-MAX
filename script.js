@@ -13,7 +13,7 @@
   // ===== API_BASE: из ?api=..., иначе из localStorage. Управление через window.setApiBase() =====
   const paramBase = qp.get('api');
   const storedBase = localStorage.getItem('api_base') || '';
-  let API_BASE = 'https://ware-macintosh-occasion-sewing.trycloudflare.com';
+  let API_BASE = 'https://earning-attitude-hunt-wrote.trycloudflare.com';
 
   if (paramBase) {
     API_BASE = paramBase.replace(/\/$/, '');
@@ -273,3 +273,4 @@
   bootstrap();
   showScreen('menu');
 })();
+
