@@ -263,6 +263,7 @@ async function loadPriv(){
   }
 
   // показать баланс на экране вывода
+window.refreshWithdrawBalance = refreshWithdrawBalance;
 async function refreshWithdrawBalance(){
   const res = await post("/stats", {});
   if(res?.ok && res.stats){
@@ -306,6 +307,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
