@@ -1,5 +1,6 @@
 // ===== Config =====
-const API_BASE = (window.API_BASE || "https://projectors-attractive-kick-sky.trycloudflare.com").replace(/\/$/,"");
+const API_BASE = (window.API_BASE || "https://projectors-attractive-kick-sky.trycloudflare.com").replace(/\/$/,'');
+const api = (p) => API_BASE + (p.startsWith('/') ? p : '/' + p);
 
 // ===== Telegram WebApp / User =====
 const tg = window.Telegram?.WebApp; tg && tg.expand();
@@ -9,11 +10,16 @@ const user_id = auth.id || Number(qp.get("user_id")) || window.USER_ID || 0;
 const username = auth.username || auth.first_name || qp.get("username") || "user";
 
 // ===== HTTP =====
-async function post(path, data){
-  const r = await fetch(API_BASE + "/api" + path, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ initData: tg?.initData, user_id, username, ...(data||{}) })
+async function post(path, data) {
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData || new URLSearchParams(location.search).get("initData") || "";
+  const user_id  = Number(new URLSearchParams(location.search).get("user_id")) || undefined;
+  const username = new URLSearchParams(location.search).get("username") || undefined;
+
+  const r = await fetch(api(path), {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(Object.assign({ initData, user_id, username }, data || {}))
   });
   return r.json();
 }
@@ -288,6 +294,7 @@ document.querySelector('#wdCancel')?.addEventListener('click', async () => {
   loadStats();
   loadLogs();
 })();
+
 
 
 
