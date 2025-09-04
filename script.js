@@ -347,51 +347,83 @@ async function confirmBuy(plan, price) {
 
 /* ====== Roulette ====== */
 let rouletteReady = false;
+const PRIZES = [
+  {v:0.10, icon:"🟦", cls:"r-cmn"},
+  {v:0.20, icon:"🟦", cls:"r-cmn"},
+  {v:0.30, icon:"🟪", cls:"r-uc"},
+  {v:0.40, icon:"🟦", cls:"r-cmn"},
+  {v:0.50, icon:"🟨", cls:"r-rare"},
+  {v:0.60, icon:"🟦", cls:"r-cmn"},
+  {v:0.70, icon:"🟪", cls:"r-uc"},
+  {v:0.80, icon:"⚡",  cls:"r-rare"},
+  {v:0.90, icon:"🟦", cls:"r-cmn"},
+  {v:1.00, icon:"💠", cls:"r-uc"},
+  {v:1.10, icon:"🎁", cls:"r-rare"},
+  {v:1.20, icon:"💎", cls:"r-legend"},
+  {v:1.30, icon:"💎", cls:"r-legend"}
+];
+const RU_ITEM_W = 96; // keep in sync with CSS .case-item width
+const RU_REPEAT = 8;  // how many times to repeat strip for smooth cycles
+let ruStripBuilt = false;
+
 function setupRouletteOnce() {
   if (rouletteReady) return;
   rouletteReady = true;
+  buildRouletteStrip();
   $("#ru-spin")?.addEventListener("click", spin);
 }
 
-async function spin() {
+function buildRouletteStrip() {
   const strip = $("#case-strip");
-  const pointer = $("#case-pointer");
-  const resBox = $("#ru-result");
-  if (!strip) return;
-
-  // Build items visually
-  const prizes = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3];
-  strip.innerHTML = prizes.map(v => `<div class="case-item">$${fmtMoney(v)}</div>`).join("");
+  if (!strip || ruStripBuilt) return;
+  const chunk = PRIZES.map(p => `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`).join("");
+  strip.innerHTML = new Array(RU_REPEAT).fill(chunk).join("");
   strip.style.transform = "translateX(0px)";
+  ruStripBuilt = true;
+}
+
+async function spin() {
+  const wrap = $(".case-wrap");
+  const strip = $("#case-strip");
+  const resBox = $("#ru-result");
+  const btn = $("#ru-spin");
+  if (!strip || !wrap) return;
+
+  // UI lock + visual shine
+  btn.disabled = true;
+  wrap.classList.add("spinning");
+  setText(resBox, "Крутится…");
 
   // Ask server
-  let win = null, balance = null, err = null;
+  let win = null, balance = null;
   try {
     const r = await post("/api/roulette_spin", {});
     if (!r?.ok) throw new Error("bad");
     win = Number(r.win || 0);
     balance = Number(r.balance || 0);
   } catch (e) {
-    err = e;
-  }
-  if (err) {
     toast("Спин недоступен", "Пополните баланс или повторите позже");
-    if (F.debug) console.error(err);
+    if (F.debug) console.error(e);
+    wrap.classList.remove("spinning");
+    btn.disabled = false;
     return;
   }
 
-  // Animate strip to land near target index
-  const idx = nearestPrizeIndex(prizes, win);
-  const itemW = 96; // CSS width of .case-item
-  const cycles = 8; // full cycles before stop
-  const target = (cycles * prizes.length + idx) * itemW;
+  // Compute landing index inside our repeated strip
+  const idxBase = nearestPrizeIndex(PRIZES.map(p=>p.v), win);
+  const totalItems = PRIZES.length * RU_REPEAT;
+  const cycles = 7 + Math.floor(Math.random()*3); // 7..9 full cycles
+  const targetIndex = cycles * PRIZES.length + idxBase;
+  const target = targetIndex * RU_ITEM_W;
 
-  const dur = 2800; // ms
+  // Animate
+  const dur = 3200; // ms
   const t0 = performance.now();
   strip.style.willChange = "transform";
 
   function anim(t) {
     const p = Math.min(1, (t - t0) / dur);
+    // smoother accel+decel with overshoot
     const eased = cubicOut(p);
     const x = -target * eased;
     strip.style.transform = `translateX(${x}px)`;
@@ -401,10 +433,18 @@ async function spin() {
   requestAnimationFrame(anim);
 
   function onStop() {
+    // tiny settle bounce
+    const settle = 60;
+    strip.animate(
+      [{ transform: `translateX(${-target}px)` }, { transform: `translateX(${-(target - settle)}px)` }, { transform: `translateX(${-target}px)` }],
+      { duration: 320, easing: "cubic-bezier(.2,1,.2,1)" }
+    );
     setText(resBox, `Выигрыш: $${fmtMoney(win)}`);
     toast("Результат", `$${fmtMoney(win)} • Баланс $${fmtMoney(balance)}`);
     refreshWithdrawBalance();
     refreshLogs();
+    wrap.classList.remove("spinning");
+    btn.disabled = false;
   }
 }
 
