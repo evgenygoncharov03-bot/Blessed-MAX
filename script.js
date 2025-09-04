@@ -11,12 +11,10 @@ async function ping() {
   }
 }
 
-await ping();
-
 ;(function () {
   'use strict';
 
-  const API_BASE = 'https://earning-attitude-hunt-wrote.trycloudflare.com'.replace(/\/$/, '');
+  const API_BASE = 'https://racial-congratulations-indianapolis-poll.trycloudflare.com'.replace(/\/$/, '');
   const tg = window.Telegram?.WebApp; if (tg) tg.expand();
 
   // селекторы
@@ -181,4 +179,5 @@ await ping();
   // старт
   (async function init(){ show('menu'); await checkApi(); await loadStats(); await loadLogs(); })();
 })();
+
 
