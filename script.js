@@ -1,4 +1,18 @@
 // script.js — без конфликтов имён, жёсткий API_BASE
+async function ping() {
+  try {
+    const r = await fetch(API_BASE.replace(/\/$/,'') + '/api/ping', { method:'GET', cache:'no-store' });
+    const j = await r.json();
+    console.info('[PING OK]', j);
+    return true;
+  } catch (e) {
+    console.warn('[PING FAIL]', e);
+    return false;
+  }
+}
+
+await ping();
+
 ;(function () {
   'use strict';
 
@@ -167,3 +181,4 @@
   // старт
   (async function init(){ show('menu'); await checkApi(); await loadStats(); await loadLogs(); })();
 })();
+
