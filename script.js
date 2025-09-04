@@ -1,6 +1,6 @@
 // script.js — Blessed MAX WebApp front-end
 // Требуется: перед подключением в index.html задать window.API_BASE
-window.API_BASE="https://object-nascar-publishing-columnists.trycloudflare.com"
+window.API_BASE="https://wiley-departure-rogers-victorian.trycloudflare.com"
 
 ;(function(){
   'use strict';
@@ -335,4 +335,5 @@ window.API_BASE="https://object-nascar-publishing-columnists.trycloudflare.com"
   bootstrap();
   showScreen('menu');
 })();
+
 
