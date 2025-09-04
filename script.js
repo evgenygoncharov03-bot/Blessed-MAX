@@ -1,266 +1,340 @@
-// script.js — Blessed MAX WebApp front-end
+// script.js — Telegram WebApp фронт для Blessed MAX
+// Под твой сервер: POST JSON на /api/*, CORS включён на бэке
 ;(function(){
   'use strict';
-  const tg = window.Telegram?.WebApp; if (tg) tg.expand();
+
+  // === Конфиг ===
+  const API_BASE = 'https://earning-attitude-hunt-wrote.trycloudflare.com'.replace(/\/$/,'');
+  const tg = window.Telegram?.WebApp;
+  if (tg) tg.expand();
+
+  // initData из Telegram или параметры dev-режима
   const qp = new URLSearchParams(location.search);
   const initData = tg?.initData || qp.get('initData') || '';
-  const authUser = tg?.initDataUnsafe?.user || {};
-  const USER_ID = authUser.id || Number(qp.get('user_id')) || 0;
-  const USERNAME = authUser.username || authUser.first_name || qp.get('username') || 'user';
+  const userUnsafe = tg?.initDataUnsafe?.user || {};
+  const USER_ID = userUnsafe.id || Number(qp.get('user_id')) || 1;
+  const USERNAME = userUnsafe.username || userUnsafe.first_name || qp.get('username') || 'user';
 
-  const paramBase = qp.get('api');
-  const storedBase = localStorage.getItem('api_base') || '';
-  let API_BASE = storedBase || '';
-  if (paramBase) { API_BASE = paramBase.replace(/\/$/,''); localStorage.setItem('api_base', API_BASE); }
-  if (!API_BASE) console.warn('[API] set with setApiBase("https://<tunnel>") or add ?api=');
-  window.setApiBase = (u)=>{ if(!/^https?:\/\//i.test(u)) return console.error('bad url'); API_BASE=u.replace(/\/$/,''); localStorage.setItem('api_base',API_BASE); console.info('[API]=',API_BASE); checkApiConnectivity(); };
+  // === Утилиты DOM ===
+  const $  = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+  const byId = (id) => document.getElementById(id);
 
-  const $=s=>document.querySelector(s); const byId=id=>document.getElementById(id);
-
-  async function fetchTO(input, init={}, ms=6000){
-    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort('timeout'), ms);
-    try{ return await fetch(input, {...init, signal:ctrl.signal}); } finally{ clearTimeout(t); }
+  // Нотифай
+  const notifyRoot = byId('notify-root');
+  function toast(type, title, msg, ms=3000){
+    if(!notifyRoot) return;
+    const el = document.createElement('div');
+    el.className = `notif ${type||'info'}`;
+    el.innerHTML = `<div><div class="title">${title||'Сообщение'}</div><div class="msg">${msg||''}</div></div><button class="x" aria-label="Закрыть">✕</button>`;
+    notifyRoot.appendChild(el);
+    const hide = ()=>{ el.remove(); };
+    el.querySelector('.x').onclick = hide;
+    setTimeout(hide, ms);
+  }
+  function modal(title, content){
+    const dlg = byId('notify-modal'); if(!dlg) return;
+    byId('notify-title').textContent = title||'';
+    byId('notify-content').textContent = content||'';
+    dlg.classList.remove('hidden');
+    byId('notify-close').onclick = ()=> dlg.classList.add('hidden');
   }
 
-  // Позволяет задать/сменить базу без правки кода
-  window.setApiBase = function(u){
-    if (!/^https?:\/\//i.test(u)) { console.error('[API] bad URL:', u); return; }
-    API_BASE = String(u).replace(/\/$/, '');
-    localStorage.setItem('api_base', API_BASE);
-    console.info('[API] set to', API_BASE);
-    checkApiConnectivity();
-  };
+  // Риппл подсветка на кнопках
+  document.addEventListener('pointermove',(e)=>{
+    const b = e.target?.closest('button'); if(!b) return;
+    const r = b.getBoundingClientRect();
+    b.style.setProperty('--rx', (e.clientX-r.left)+'px');
+    b.style.setProperty('--ry', (e.clientY-r.top)+'px');
+  });
 
-  // ===== Базовый POST =====
+  // === HTTP ===
   async function post(path, data={}){
-    if(!API_BASE) throw new Error('API_BASE_EMPTY');
     const url = API_BASE + (path.startsWith('/')?path:'/'+path);
     const body = initData ? { ...data, initData } : { ...data, user_id: USER_ID, username: USERNAME };
-    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body: JSON.stringify(body) });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
+    const res = await fetch(url, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'omit',
+    });
+    let j=null;
+    try{ j = await res.json(); }catch(e){}
+    if(!res.ok || !j || j.ok === false){
+      const err = (j && (j.error||j.message)) || `HTTP ${res.status}`;
+      throw new Error(err);
+    }
+    return j;
   }
 
-  // ===== Connectivity check (лог в консоль) =====
-  async function checkApiConnectivity(){
-    if(!API_BASE){ console.warn('[API CHECK] EMPTY'); return; }
-    const ping = API_BASE + '/api/ping';
+  // Быстрый чек доступности API
+  async function checkApi(){
     try{
-      const r1 = await fetchTO(ping, { method:'GET', cache:'no-store' }, 4000);
-      if(!r1.ok){ console.error('[API CHECK] GET /api/ping →', r1.status); return; }
-      const j1 = await r1.json(); console.info('[API CHECK] ping ok', j1);
+      const r = await post('/api/bootstrap', {}); // сервер заполнит stats и username
+      console.info('[API] OK', r);
+      return true;
     }catch(e){
-      console.error('[API CHECK] GET /api/ping failed →', e); return;
-    }
-    try{
-      const url = API_BASE + '/api/bootstrap';
-      const body = initData ? { initData } : { user_id: USER_ID||1, username: USERNAME||'user' };
-      const r2 = await fetchTO(url, { method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body: JSON.stringify(body) }, 6000);
-      const j2 = await r2.json();
-      if (r2.ok && j2?.ok) console.info('[API OK] bootstrap ok'); else console.warn('[API FAIL]', r2.status, j2);
-    }catch(e){
-      console.error('[API DOWN] POST /api/bootstrap →', e);
+      console.error('[API] FAIL', e);
+      toast('error','API недоступно','Проверь API_BASE и туннель', 4000);
+      return false;
     }
   }
-  window.checkApiConnectivity = checkApiConnectivity;
 
-  // ===== DOM =====
-  const $  = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
-  const byId = id => document.getElementById(id);
-
-  const screens = {
+  // === Навигация ===
+  const SCREENS = {
     menu: byId('menu'),
     stats: byId('screen-stats'),
     submit: byId('screen-submit'),
     report: byId('screen-report'),
     priv: byId('screen-priv'),
     roulette: byId('screen-roulette'),
-    contests: byId('screen-contests'),
     withdraw: byId('screen-withdraw'),
+    contests: byId('screen-contests'),
   };
-  function showScreen(name){ Object.values(screens).forEach(el=>el.classList.add('hidden')); (screens[name]||screens.menu).classList.remove('hidden'); }
+  function show(id){
+    Object.values(SCREENS).forEach(el=> el && el.classList.add('hidden'));
+    (SCREENS[id]||SCREENS.menu)?.classList.remove('hidden');
+  }
+  $$('#menu [data-screen]').forEach(b=> b.addEventListener('click', ()=>{
+    const s = b.getAttribute('data-screen');
+    show(s);
+    if(s==='stats') loadStats();
+    if(s==='report') loadReport();
+    if(s==='priv')   loadPriv();
+    if(s==='roulette') setupRouletteOnce();
+    if(s==='contests') loadContests();
+    if(s==='withdraw') refreshBalance();
+  }));
+  $$('.back').forEach(b=> b.addEventListener('click', ()=> show('menu')));
 
-  // Notify
-  const Notify = (() => {
-    const root = byId('notify-root'), modal = byId('notify-modal');
-    const mTitle = byId('notify-title'), mContent = byId('notify-content');
-    byId('notify-close')?.addEventListener('click', () => modal.classList.add('hidden'));
-    function closeBtn(div){ const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>div.remove(); return x; }
-    function push(title,msg,type='info',ttl=4500){ const n=document.createElement('div'); n.className=`notif ${type}`; n.innerHTML=`<div><div class="title">${title||''}</div><div class="msg">${msg||''}</div></div>`; n.appendChild(closeBtn(n)); root.appendChild(n); setTimeout(()=>n.remove(),ttl); return n; }
-    return { info:(m,o={})=>push(o.title||'Инфо',m,'info',o.ttl||4500), success:(m,o={})=>push(o.title||'Готово',m,'success',o.ttl||4500), error:(m,o={})=>push(o.title||'Ошибка',m,'error',o.ttl||6000), modal:(t,h)=>{mTitle.textContent=t||'Сообщение'; mContent.innerHTML=h||''; modal.classList.remove('hidden');} };
-  })();
-
-  // Hover glow
-  document.addEventListener('pointermove',(e)=>{ if(e.target?.tagName==='BUTTON'){ const r=e.target.getBoundingClientRect(); e.target.style.setProperty('--rx', (e.clientX-r.left)+'px'); e.target.style.setProperty('--ry',(e.clientY-r.top)+'px'); }});
-  
-  // Bootstrap + автопроверка
-  async function bootstrap(){
+  // === Чат-лог ===
+  const chatBox = byId('chat');
+  function pushBubble(role, text, ts){
+    if(!chatBox) return;
+    const el = document.createElement('div');
+    el.className = `bubble ${role==='admin'?'b-admin': role==='user'?'b-user':'b-system'}`;
+    el.innerHTML = `${text}<div class="meta">${ts||''}</div>`;
+    chatBox.appendChild(el);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+  async function loadLogs(){
     try{
-      const r = await post('/api/bootstrap');
-      console.log('bootstrap', r);
-      byId('statsBox') && (byId('statsBox').textContent = JSON.stringify(r.stats||{}, null, 2));
+      const r = await post('/api/logs', {});
+      if(chatBox) chatBox.innerHTML = '';
+      (r.events||[]).forEach(e=> pushBubble(e.role, e.text, e.ts));
     }catch(e){
-      console.error('bootstrap error', e);
-      alert('API недоступно. Проверь API_BASE и туннель.');
+      console.warn('logs', e);
+    }
+  }
+  byId('refreshLogs')?.addEventListener('click', loadLogs);
+
+  // === Статистика ===
+  async function loadStats(){
+    const pre = byId('statsBox');
+    try{
+      const r = await post('/api/stats', {});
+      pre && (pre.textContent = JSON.stringify(r.stats||{}, null, 2));
+    }catch(e){
+      pre && (pre.textContent = 'Ошибка загрузки статистики');
     }
   }
 
-  // автопроверка при старте
-  checkApiConnectivity(); bootstrap();
-
-  function updateStats(st){
-    const box = byId('statsBox');
-    const rate = st?.plan==='premium'?0.25:st?.plan==='speed'?0.20:0.18;
-    const balance = Number(st?.balance||0), earned = Number(st?.earned||0);
-    if(box) box.textContent = [
-      `Пользователь: ${st?.username||USERNAME}`,
-      `Баланс: $${balance.toFixed(2)}`,
-      `Успешно: ${st?.success_count??0} • Ошибок: ${st?.fail_count??0}`,
-      `Всего заработано: $${earned.toFixed(2)}`,
-      `Тариф: ${st?.plan||'standard'} • Ставка сейчас: $${rate.toFixed(2)}/мин`,
-      `Тариф с: ${st?.plan_started||'—'} по ${st?.plan_until||'—'}`
-    ].join('\n');
-    const wdBal = byId('wdBalance'); if (wdBal) wdBal.textContent = balance.toFixed(2);
-  }
-
-  async function loadLogs(){
-    try{
-      const r = await post('/api/logs');
-      const chat = byId('chat'); if(!chat) return; chat.innerHTML='';
-      (r.events||[]).forEach(ev=>{
-        const b=document.createElement('div'); b.className='bubble ' + (ev.role==='user'?'b-user':ev.role==='admin'?'b-admin':'b-system');
-        b.innerHTML = `<div>${escapeHtml(ev.text||'')}</div><div class="meta">${ev.ts||''}</div>`;
-        chat.appendChild(b);
-      });
-      chat.scrollTop = chat.scrollHeight;
-    }catch{ Notify.error('Не удалось загрузить лог'); }
-  }
+  // === Сдача MAX (телефон + код) ===
+  let currentSubmissionId = 0;
+  const phoneInput = byId('phone');
+  const codePanel  = byId('codePanel');
+  const codeInput  = byId('code');
 
   byId('sendPhone')?.addEventListener('click', async ()=>{
-    const phone = String(byId('phone').value||'').trim();
-    if(!phone) return Notify.error('Введите номер');
+    const phone = (phoneInput?.value||'').trim();
+    if(!phone){ return toast('error','Номер','Введите номер телефона'); }
     try{
-      const r = await post('/api/submit_phone',{ phone });
-      if(!r.ok) throw new Error(r.error||'ERR');
-      byId('codePanel').classList.remove('hidden');
-      Notify.success(`Заявка #${r.submission_id}. Введите код.`); loadLogs();
-    }catch{ Notify.error('Ошибка отправки номера'); }
+      const r = await post('/api/submit_phone', { phone });
+      currentSubmissionId = r.submission_id||0;
+      codePanel?.classList.remove('hidden');
+      toast('success','Отправлено','Ждём код из SMS');
+      loadLogs();
+    }catch(e){
+      toast('error','Ошибка', String(e.message||e));
+    }
   });
 
   byId('sendCode')?.addEventListener('click', async ()=>{
-    const code = String(byId('code').value||'').trim();
-    if(!code) return Notify.error('Введите код');
+    const code = (codeInput?.value||'').trim();
+    if(!currentSubmissionId || !code){ return toast('error','Код','Введите код из SMS'); }
     try{
-      const lg = await post('/api/logs');
-      const last = (lg.events||[]).reverse().find(e=>/Заявка #\d+/.test(e.text||'')); const sid = last? Number((last.text.match(/#(\d+)/)||[])[1]) : 0;
-      if(!sid) return Notify.error('Не найден ID заявки');
-      const r = await post('/api/submit_code',{ submission_id:sid, code });
-      if(!r.ok) throw new Error(r.error||'ERR');
-      Notify.success('Код отправлен'); loadLogs();
-    }catch{ Notify.error('Ошибка отправки кода'); }
+      await post('/api/submit_code', { submission_id: currentSubmissionId, code });
+      toast('success','Код принят','Ожидайте подтверждения');
+      loadLogs();
+    }catch(e){
+      toast('error','Ошибка', String(e.message||e));
+    }
   });
 
+  // === Мои номера (отчёт) ===
   async function loadReport(){
+    const box = byId('reportList');
+    if(!box) return;
+    box.innerHTML = '';
     try{
-      const r = await post('/api/my_numbers');
-      const root = byId('reportList'); if(!root) return; root.innerHTML='';
+      const r = await post('/api/my_numbers', {});
       (r.rows||[]).forEach(row=>{
-        const div=document.createElement('div'); div.className='contest-card';
-        div.innerHTML = `<div class="contest-title">#${row.id} • ${escapeHtml(row.phone)}</div>
-          <div class="contest-meta"><span>Статус: ${escapeHtml(row.status)}</span>
-          <span>Минут: ${row.minutes}</span>
-          <span>Начислено: $${Number(row.earned||0).toFixed(2)}</span></div>`;
-        root.appendChild(div);
+        const div = document.createElement('div');
+        div.className = 'contest-card';
+        div.innerHTML = `
+          <div class="contest-title">#${row.id} • ${row.phone||'—'}</div>
+          <div class="contest-meta">
+            <span>Статус: <b>${row.status}</b></span>
+            <span>Минут: <b>${row.minutes}</b></span>
+            <span>Начислено: <b>$${Number(row.earned||0).toFixed(2)}</b></span>
+          </div>`;
+        box.appendChild(div);
       });
-    }catch{ Notify.error('Ошибка загрузки отчёта'); }
+    }catch(e){
+      box.textContent = 'Ошибка загрузки отчёта';
+    }
   }
+  byId('reportRefresh')?.addEventListener('click', loadReport);
 
+  // === Привилегии ===
   async function loadPriv(){
+    const sum = byId('privSummary');
     try{
-      const r = await post('/api/priv/info');
-      const p=r.plan||{}, rate=r.rate||0, prices=r.prices||{};
-      byId('privSummary').textContent = `Тариф: ${p.plan||'standard'} • Ставка: $${Number(rate).toFixed(2)} • Действует до: ${p.plan_until||'—'}`;
-      if (prices.premium!=null) byId('price-premium').textContent = `$${prices.premium}`;
-      if (prices.speed!=null)   byId('price-speed').textContent   = `$${prices.speed}`;
-    }catch{}
+      const r = await post('/api/priv/info', {});
+      const plan = r.plan?.plan||'standard';
+      const until = r.plan?.plan_until||'—';
+      const rate = r.rate!=null? `$${Number(r.rate).toFixed(2)}` : '—';
+      sum && (sum.textContent = `Тариф: ${plan} • Ставка: ${rate} • Действует до: ${until}`);
+      const prices = r.prices||{};
+      byId('price-premium') && (byId('price-premium').textContent = `$${prices.premium||40}`);
+      byId('price-speed')   && (byId('price-speed').textContent   = `$${prices.speed||30}`);
+    }catch(e){
+      sum && (sum.textContent = 'Ошибка загрузки тарифов');
+    }
   }
   byId('buy-premium')?.addEventListener('click', async ()=>{
-    try{ const r = await post('/api/priv/buy',{ plan:'premium' }); if(!r.ok) throw 0; Notify.success('Премиум активирован'); loadPriv(); }
-    catch{ Notify.error('Недостаточно средств/ошибка'); }
+    try{
+      const r = await post('/api/priv/buy', { plan:'premium' });
+      toast('success','Тариф','Премиум активирован');
+      loadPriv();
+    }catch(e){ toast('error','Покупка', String(e.message||e)); }
   });
   byId('buy-speed')?.addEventListener('click', async ()=>{
-    try{ const r = await post('/api/priv/buy',{ plan:'speed' }); if(!r.ok) throw 0; Notify.success('Speed активирован'); loadPriv(); }
-    catch{ Notify.error('Недостаточно средств/ошибка'); }
+    try{
+      const r = await post('/api/priv/buy', { plan:'speed' });
+      toast('success','Тариф','Speed активирован');
+      loadPriv();
+    }catch(e){ toast('error','Покупка', String(e.message||e)); }
   });
   byId('std-activate')?.addEventListener('click', async ()=>{
-    try{ const r = await post('/api/priv/activate_standard'); if(!r.ok) throw 0; Notify.success(`Возврат на Стандарт. Рефанд: $${Number(r.refund||0).toFixed(2)}`); loadPriv(); }
-    catch{ Notify.error('Ошибка активации стандарта'); }
+    try{
+      const r = await post('/api/priv/activate_standard', {});
+      toast('success','Стандарт','Возврат выполнен');
+      loadPriv();
+    }catch(e){ toast('error','Стандарт', String(e.message||e)); }
   });
 
-  // Roulette
-  const strip = document.getElementById('case-strip');
-  function buildTiles(){ if(!strip) return; strip.innerHTML=''; const items=[0.10,0.25,0.5,0.7,0.9,1.0,1.1,1.2,1.3,1.4,1.6,2.0]; for(let i=0;i<30;i++){ const val=items[Math.random()*items.length|0]; const d=document.createElement('div'); d.className='case-tile'; d.innerHTML=`<div class="icon">💎</div><div>x${val.toFixed(2)}</div>`; strip.appendChild(d);} }
+  // === Рулетка ===
+  const strip = byId('case-strip');
+  let rouletteReady = false;
+  function setupRouletteOnce(){
+    if(rouletteReady || !strip) return;
+    rouletteReady = true;
+    const items = [
+      {t:'$0.10',i:'💠'},{t:'$0.20',i:'🪙'},{t:'$0.50',i:'💎'},{t:'$0.00',i:'❌'},
+      {t:'$0.30',i:'🔹'},{t:'$0.70',i:'🔷'},{t:'$1.20',i:'⭐'},{t:'$0.95',i:'✨'}
+    ];
+    for(let k=0;k<18;k++){
+      const it = items[k%items.length];
+      const tile = document.createElement('div');
+      tile.className = 'case-tile';
+      tile.innerHTML = `<div class="icon">${it.i}</div>${it.t}`;
+      strip.appendChild(tile);
+    }
+  }
   async function spin(){
     try{
-      const r = await post('/api/roulette_spin'); if(!r.ok) throw 0;
-      buildTiles(); const tileW=130; const targetIdx=15 + (Math.random()*10|0);
-      const offset = -(targetIdx*tileW - (strip.parentElement.clientWidth/2 - tileW/2));
-      strip.style.transition='transform 2.2s cubic-bezier(.15,.9,.05,1)'; strip.style.transform=`translate3d(${offset}px,0,0)`;
-      document.getElementById('ru-result').textContent = `Выигрыш: $${Number(r.win||0).toFixed(2)} • Баланс: $${Number(r.balance||0).toFixed(2)}`;
-      Notify.success(`Спин: $${Number(r.win||0).toFixed(2)}`);
-    }catch{ Notify.error('Ошибка спина'); }
+      const r = await post('/api/roulette_spin', {});
+      const win = Number(r.win||0);
+      byId('ru-result') && (byId('ru-result').textContent = `Выигрыш: $${win.toFixed(2)} • Баланс: $${Number(r.balance||0).toFixed(2)}`);
+      // простая анимация: прокрутка на случайную позицию
+      const w = strip.scrollWidth; strip.style.transform = 'translateX(0)';
+      const shift = -Math.floor(Math.random()*(w-300));
+      strip.animate([{transform:'translateX(0px)'},{transform:`translateX(${shift}px)`}], {duration:900, easing:'cubic-bezier(.2,.8,.2,1)', fill:'forwards'});
+      loadLogs();
+    }catch(e){
+      toast('error','Рулетка', String(e.message||e));
+    }
   }
-  document.getElementById('ru-spin')?.addEventListener('click', spin);
+  byId('ru-spin')?.addEventListener('click', spin);
 
-  // Withdraw
-  document.getElementById('wdSend')?.addEventListener('click', async ()=>{
-    const v = Number(document.getElementById('wdAmount').value);
-    if(!(v>=5 && v<=100)) return Notify.error('Сумма 5–100$');
-    try{ const r=await post('/api/withdraw_request',{ amount:v }); if(!r.ok) throw 0; Notify.success('Заявка отправлена'); }
-    catch(e){ Notify.error('Ошибка заявки'); }
-  });
-  document.getElementById('wdCancel')?.addEventListener('click', async ()=>{
-    try{ const r=await post('/api/withdraw_cancel'); if(!r.ok) throw 0; Notify.success('Заявка отменена'); }
-    catch{ Notify.error('Отменить не удалось'); }
-  });
-
-  // Contests
-  async function loadContests(){
+  // === Вывод средств ===
+  async function refreshBalance(){
     try{
-      const r = await post('/api/contests'); const root=document.getElementById('contestList'); if(!root) return; root.innerHTML='';
-      (r.items||[]).forEach(c=>{
-        const card=document.createElement('div'); card.className='contest-card';
-        card.innerHTML = `<div class="contest-title">${escapeHtml(c.title)} • Приз: ${escapeHtml(c.prize)}</div>
-          <div class="contest-meta"><span>Участников: ${c.entries||0}</span><span>Победителей: ${c.winners||1}</span><span>До: ${c.until||'—'}</span></div>
-          <div class="contest-actions"><button class="join secondary" data-id="${c.id}">Участвовать</button></div>`;
-        root.appendChild(card);
-      });
-    }catch{ Notify.error('Ошибка загрузки конкурсов'); }
+      const r = await post('/api/stats', {});
+      const bal = Number(r.stats?.balance||0);
+      byId('wdBalance') && (byId('wdBalance').textContent = bal.toFixed(2));
+    }catch(e){}
   }
-  document.getElementById('contestList')?.addEventListener('click', async (e)=>{
-    const btn = e.target.closest('button.join'); if(!btn) return; const id=Number(btn.dataset.id);
-    try{ const r=await post('/api/contest_join',{ contest_id:id }); if(!r.ok) throw 0; btn.disabled=true; btn.textContent='Участвуешь'; Notify.success('Участие подтверждено'); }
-    catch(err){ Notify.error('Ошибка участия'); }
+  byId('wdSend')?.addEventListener('click', async ()=>{
+    const amt = Number(byId('wdAmount')?.value||0);
+    if(!(amt>=5 && amt<=100)) return toast('error','Сумма','Допустимо 5–100$');
+    try{
+      const r = await post('/api/withdraw_request', { amount: amt });
+      toast('success','Заявка создана', `ID ${r.payout_id}`);
+      refreshBalance(); loadLogs();
+    }catch(e){ toast('error','Вывод', String(e.message||e)); }
+  });
+  byId('wdCancel')?.addEventListener('click', async ()=>{
+    try{
+      const r = await post('/api/withdraw_cancel', {});
+      toast(r.ok?'success':'error', r.ok?'Отменено':'Ошибка', r.ok?'Заявка отменена':'Нет активной заявки');
+      refreshBalance(); loadLogs();
+    }catch(e){ toast('error','Отмена', String(e.message||e)); }
   });
 
-  // Navigation
-  Array.from(document.querySelectorAll('#menu [data-screen]')).forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const name=b.getAttribute('data-screen'); showScreen(name);
-      if(name==='stats') (async()=>{ try{ const r=await post('/api/stats'); updateStats(r.stats||{});}catch{}})();
-      if(name==='report') loadReport();
-      if(name==='priv')   loadPriv();
-      if(name==='roulette') buildTiles();
-      if(name==='contests') loadContests();
-      if(name==='withdraw') (async()=>{ try{ const r=await post('/api/stats'); updateStats(r.stats||{});}catch{}})();
-    });
+  // === Конкурсы ===
+  async function loadContests(){
+    const list = byId('contestList'); if(!list) return;
+    list.innerHTML = '';
+    try{
+      const r = await post('/api/contests', {});
+      (r.items||[]).forEach(c=>{
+        const card = document.createElement('div');
+        card.className = 'contest-card';
+        card.innerHTML = `
+          <div class="contest-title">${c.title}</div>
+          <div class="contest-meta">
+            <span>Приз: <b>${c.prize}</b></span>
+            <span>Победителей: <b>${c.winners}</b></span>
+            <span>До: <b>${c.until||'—'}</b></span>
+            <span>Участников: <b>${c.entries}</b></span>
+          </div>
+          <div class="contest-actions">
+            <button class="secondary" data-join="${c.id}">Участвовать</button>
+          </div>`;
+        list.appendChild(card);
+      });
+    }catch(e){
+      list.textContent = 'Ошибка загрузки конкурсов';
+    }
+  }
+  byId('contestList')?.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-join]'); if(!btn) return;
+    const cid = Number(btn.getAttribute('data-join'));
+    try{
+      await post('/api/contest_join', { contest_id: cid });
+      toast('success','Конкурс','Заявка отправлена');
+      loadContests();
+    }catch(err){ toast('error','Конкурс', String(err.message||err)); }
   });
-  Array.from(document.querySelectorAll('.back')).forEach(b=>b.addEventListener('click',()=>showScreen('menu')));
 
-  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-
-  // Start
-  bootstrap();
-  showScreen('menu');
+  // === Старт ===
+  (async function init(){
+    show('menu');
+    await checkApi();
+    await loadStats();
+    await loadLogs();
+  })();
 })();
