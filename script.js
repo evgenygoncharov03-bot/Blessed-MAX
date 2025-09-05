@@ -93,11 +93,13 @@ async function post(path, data = {}, opts = {}) {
   return r.json();
 }
 
-/* ====== State ====== */
+// ====== State ======
 const S = {
   lastSubmissionId: null,
   stats: null,
   prices: { premium: 40.0, speed: 30.0 },
+  phoneLocked: false,          // NEW
+  phoneValue: ""               // NEW
 };
 
 /* ====== UI wiring ====== */
@@ -140,6 +142,25 @@ function bindMenu() {
   $("#refreshLogs")?.addEventListener("click", refreshLogs);
 }
 
+function lockPhone(phone){
+  const inp = document.querySelector('#phone');
+  const btn = document.querySelector('#sendPhone');
+  if (inp){ inp.value = phone || inp.value; inp.readOnly = true; inp.classList.add('locked'); }
+  if (btn){ btn.disabled = true; btn.textContent = 'Отправлено'; }
+  S.phoneLocked = true; S.phoneValue = (phone || inp?.value || '');
+  const codePanel = document.querySelector('#codePanel'); if (codePanel) show(codePanel);
+}
+function unlockPhone(){
+  const inp = document.querySelector('#phone');
+  const btn = document.querySelector('#sendPhone');
+  if (inp){ inp.readOnly = false; inp.classList.remove('locked'); }
+  if (btn){ btn.disabled = false; btn.textContent = 'Отправить'; }
+  S.phoneLocked = false; S.phoneValue = '';
+}
+document.querySelector("#phone")?.addEventListener("beforeinput", (e)=>{
+  if (S.phoneLocked) e.preventDefault();
+});
+
 /* ====== Bootstrap ====== */
 async function bootstrap() {
   try {
@@ -148,8 +169,20 @@ async function bootstrap() {
       S.stats = r.stats || {};
       html($("#statsBox"), prettyStats(S.stats));
       await refreshLogs();
-      await refreshPriv(); // also picks up prices
+      await refreshPriv();
       await refreshWithdrawBalance();
+
+      // восстановление незавершённой заявки
+      try {
+        const os = await post("/api/open_submission", {});
+        if (os?.ok && os.open) {
+          S.lastSubmissionId = os.open.id;
+          lockPhone(os.open.phone || "");
+          goto("submit"); // показать экран с полем кода
+        } else if (typeof unlockPhone === "function") {
+          unlockPhone();
+        }
+      } catch {}
     }
   } catch (e) {
     toast("API недоступно", "Проверь ?api= и туннель Cloudflare");
@@ -225,6 +258,7 @@ function roleLabel(r) {
 /* ====== Submit MAX ====== */
 function bindSubmit() {
   $("#sendPhone")?.addEventListener("click", async () => {
+    if (S.phoneLocked) { toast("Номер уже отправлен"); return; }
     const phone = $("#phone").value.trim();
     if (!phone) return toast("Введите номер", "Поле не может быть пустым");
     try {
@@ -234,11 +268,16 @@ function bindSubmit() {
           const until = r.until ? safeDate(r.until) : "";
           return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
         }
+        if (r?.error === "ALREADY") {
+          S.lastSubmissionId = r.submission_id;
+          lockPhone(r.phone || phone);
+          return toast("Номер уже отправлен", "Ожидайте код");
+        }
         throw new Error("bad");
       }
       S.lastSubmissionId = r.submission_id;
       toast("Номер принят", "Ожидайте. Введите код из SMS.");
-      show($("#codePanel"));
+      lockPhone(phone);
     } catch (e) {
       toast("Ошибка отправки номера");
       if (F.debug) console.error(e);
@@ -246,27 +285,44 @@ function bindSubmit() {
   });
 
   $("#sendCode")?.addEventListener("click", async () => {
+    const btn  = $("#sendCode");
     const code = $("#code").value.trim();
+
     if (!S.lastSubmissionId) return toast("Сначала отправьте номер");
     if (!code) return toast("Введите код из SMS");
+
+    btn.disabled = true;
     try {
       const r = await post("/api/submit_code", { submission_id: S.lastSubmissionId, code });
+
       if (!r?.ok) {
         if (r?.error === "BLOCKED") {
           const until = r.until ? safeDate(r.until) : "";
           return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
         }
+        if (r?.error === "NO_SUBMISSION") {
+          S.lastSubmissionId = null;
+          return alertModal("Ошибка", "Заявка не найдена. Отправьте номер заново.");
+        }
+        if (r?.error === "BAD_CODE") {
+          return toast("Неверный код", "Проверьте SMS и отправьте снова");
+        }
         throw new Error("bad");
       }
+
       toast("Код отправлен", "Администратор проверит код.");
       hide($("#codePanel"));
+      if (typeof unlockPhone === "function") unlockPhone();
+      S.lastSubmissionId = null;
       $("#phone").value = "";
-      $("#code").value = "";
+      $("#code").value  = "";
       await refreshLogs();
       goto("menu");
     } catch (e) {
       toast("Ошибка отправки кода");
       if (F.debug) console.error(e);
+    } finally {
+      btn.disabled = false;
     }
   });
 }
