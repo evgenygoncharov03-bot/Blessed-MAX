@@ -315,20 +315,20 @@ async function refreshPriv() {
     const bs = $("#buy-speed");
     const std = $("#std-activate");
 
-    function setPlanBtn(btn, isActive, price){
+    function setPlanBtn(btn, isActive){
       if (!btn) return;
       if (isActive){
         btn.textContent = "Активирован";
         btn.disabled = true;
         btn.classList.add("active");
-      }else{
-        btn.textContent = `Купить за $${fmtMoney(price)}`;
+      } else {
+        btn.textContent = "Купить";
         btn.disabled = false;
         btn.classList.remove("active");
       }
     }
-    setPlanBtn(bp, active === "premium", prices.premium);
-    setPlanBtn(bs, active === "speed", prices.speed);
+    setPlanBtn(bp, active === "premium");
+    setPlanBtn(bs, active === "speed");
     if (std) std.textContent = active === "standard" ? "Активный" : "Активировать";
     
   } catch (e) {
@@ -337,20 +337,16 @@ async function refreshPriv() {
   }
 }
 
-$("#buy-premium")?.addEventListener("click", async () => {
-  const price = S.prices.premium;
-  confirmBuy("premium", price);
-});
-$("#buy-speed")?.addEventListener("click", async () => {
-  const price = S.prices.speed;
-  confirmBuy("speed", price);
-});
+$("#buy-premium")?.addEventListener("click", () => confirmBuy("premium"));
+$("#buy-speed")?.addEventListener("click", () => confirmBuy("speed"));
+
 $("#std-activate")?.addEventListener("click", async () => {
   try {
     const r = await post("/api/priv/activate_standard", {});
     if (r?.ok) {
       toast("Активирован «Стандарт»", `Возврат $${fmtMoney(r.refund || 0)}`);
-      await refreshPriv(); await refreshWithdrawBalance();
+      await refreshPriv(); 
+      await refreshWithdrawBalance();
     }
   } catch (e) {
     toast("Ошибка активации тарифа");
@@ -358,24 +354,26 @@ $("#std-activate")?.addEventListener("click", async () => {
   }
 });
 
-async function confirmBuy(plan, price) {
+async function confirmBuy(plan) {
   try {
-    const r = await post("/api/priv/buy", { plan }); // без window.confirm
+    const r = await post("/api/priv/buy", { plan });
     if (r?.ok) {
-      toast("Тариф активирован", plan);
-      await refreshPriv();           // обновит текст кнопок на "Активирован"
+      toast("Поздравляем с покупкой", "Тариф активирован");
+      await refreshPriv();
       await refreshWithdrawBalance();
     } else {
-      toast("Покупка не удалась");
+      const err = String(r?.error || "");
+      if (err.includes("NO_FUNDS")) toast("Недостаточно средств");
+      else toast("Покупка не удалась");
     }
   } catch (e) {
     if (String(e.message || "").includes("NO_FUNDS")) toast("Недостаточно средств");
-    else toast("Ошибка покупки тарифа");
+    else toast("Покупка не удалась");
     if (F.debug) console.error(e);
   }
 }
 
-/* ====== Roulette ====== */
+/* ====== Roulette (fixed center align) ====== */
 let rouletteReady = false;
 const PRIZES = [
   {v:0.10, icon:"🟦", cls:"r-cmn"},
@@ -392,8 +390,7 @@ const PRIZES = [
   {v:1.20, icon:"💎", cls:"r-legend"},
   {v:1.30, icon:"💎", cls:"r-legend"}
 ];
-const RU_ITEM_W = 96; // keep in sync with CSS .case-item width
-const RU_REPEAT = 8;  // how many times to repeat strip for smooth cycles
+const RU_REPEAT = 8;
 let ruStripBuilt = false;
 
 function setupRouletteOnce() {
@@ -406,76 +403,101 @@ function setupRouletteOnce() {
 function buildRouletteStrip() {
   const strip = $("#case-strip");
   if (!strip || ruStripBuilt) return;
-  const chunk = PRIZES.map(p => `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`).join("");
+  const chunk = PRIZES.map(p =>
+    `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`
+  ).join("");
   strip.innerHTML = new Array(RU_REPEAT).fill(chunk).join("");
   strip.style.transform = "translateX(0px)";
   ruStripBuilt = true;
 }
 
-async function spin() {
+function measure() {
   const wrap = $(".case-wrap");
   const strip = $("#case-strip");
+  const first = strip?.querySelector(".case-item");
+  if (!wrap || !strip || !first) return null;
+  const cs = getComputedStyle(strip);
+  const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
+  const padL = parseFloat(cs.paddingLeft || "0") || 0;
+  const tileW = first.getBoundingClientRect().width;           // фактическая ширина
+  const stride = tileW + gap;                                  // шаг с учётом gap
+  const pointerX = Math.round(wrap.getBoundingClientRect().width / 2);
+  return { wrap, strip, tileW, stride, padL, pointerX };
+}
+
+async function spin() {
+  const m = measure();
+  if (!m) return;
+  const { wrap, strip, tileW, stride, padL, pointerX } = m;
   const resBox = $("#ru-result");
   const btn = $("#ru-spin");
-  if (!strip || !wrap) return;
 
-  // UI lock + visual shine
   btn.disabled = true;
   btn.dataset._label = btn.textContent;
   btn.textContent = "Крутится…";
   wrap.classList.add("spinning");
   setText(resBox, "Крутится…");
 
-  // Ask server
-  let win = null, balance = null;
+  // ask server
+  let win = null, balance = null, winIndex = null;
   try {
     const r = await post("/api/roulette_spin", {});
     if (!r?.ok) throw new Error("bad");
     win = Number(r.win || 0);
     balance = Number(r.balance || 0);
+    // если сервер присылает индекс — используем его
+    if (Number.isInteger(r.win_index)) winIndex = Number(r.win_index);
   } catch (e) {
     toast("Спин недоступен", "Пополните баланс или повторите позже");
-    if (F.debug) console.error(e);
-    wrap.classList.remove("spinning");
-    btn.disabled = false;
-    if (btn.dataset._label) btn.textContent = btn.dataset._label;
+    unlock();
     return;
   }
 
-  // Compute landing index inside our repeated strip
-  const idxBase = nearestPrizeIndex(PRIZES.map(p=>p.v), win);
+  const baseIdx = Number.isInteger(winIndex)
+    ? clampIndex(winIndex, 0, PRIZES.length - 1)
+    : nearestPrizeIndex(PRIZES.map(p => p.v), win);
+
   const totalItems = PRIZES.length * RU_REPEAT;
-  const cycles = 7 + Math.floor(Math.random()*3); // 7..9 full cycles
-  const targetIndex = cycles * PRIZES.length + idxBase;
-  const target = targetIndex * RU_ITEM_W;
+  const cycles = 7 + Math.floor(Math.random() * 3); // 7..9
+  const targetIndex = cycles * PRIZES.length + baseIdx;
 
-  // Animate
-  const dur = 3200; // ms
-  const t0 = performance.now();
+  // точный центр плитки baseIdx под центральным указателем:
+  const targetCenter = padL + targetIndex * stride + tileW / 2;
+  const target = Math.round(targetCenter - pointerX);
+
+  // animate to exact pixel
+  const dur = 3200;
+  const start = performance.now();
+  const startX = currentTranslateX(strip); // вдруг пользователь крутил ранее
+  const delta = -target - startX;
+
   strip.style.willChange = "transform";
-
-  function anim(t) {
-    const p = Math.min(1, (t - t0) / dur);
-    // smoother accel+decel with overshoot
+  requestAnimationFrame(function step(t) {
+    const p = Math.min(1, (t - start) / dur);
     const eased = cubicOut(p);
-    const x = -target * eased;
-    strip.style.transform = `translateX(${x}px)`;
-    if (p < 1) requestAnimationFrame(anim);
+    const x = startX + delta * eased;
+    strip.style.transform = `translateX(${Math.round(x)}px)`;
+    if (p < 1) requestAnimationFrame(step);
     else onStop();
-  }
-  requestAnimationFrame(anim);
+  });
 
   function onStop() {
-    // tiny settle bounce
-    const settle = 60;
+    // финальная фиксация на точное значение
+    strip.style.transform = `translateX(${-target}px)`;
+    // короткий визуальный отклик без смещения центра
     strip.animate(
-      [{ transform: `translateX(${-target}px)` }, { transform: `translateX(${-(target - settle)}px)` }, { transform: `translateX(${-target}px)` }],
-      { duration: 320, easing: "cubic-bezier(.2,1,.2,1)" }
+      [{ transform: `translateX(${-target}px)` }, { transform: `translateX(${-target}px)` }],
+      { duration: 200 }
     );
+
     setText(resBox, `Выигрыш: $${fmtMoney(win)}`);
     toast("Результат", `$${fmtMoney(win)} • Баланс $${fmtMoney(balance)}`);
     refreshWithdrawBalance();
     refreshLogs();
+    unlock();
+  }
+
+  function unlock() {
     wrap.classList.remove("spinning");
     btn.disabled = false;
     if (btn.dataset._label) btn.textContent = btn.dataset._label;
@@ -484,14 +506,22 @@ async function spin() {
 
 function nearestPrizeIndex(arr, val) {
   let best = 0, diff = Infinity;
-  arr.forEach((v, i) => {
-    const d = Math.abs(v - val);
+  for (let i = 0; i < arr.length; i++) {
+    const d = Math.abs(arr[i] - val);
     if (d < diff) { diff = d; best = i; }
-  });
+  }
   return best;
 }
-
+function clampIndex(i, lo, hi){ return Math.max(lo, Math.min(hi, i)); }
 function cubicOut(t) { const f = t - 1; return f*f*f + 1; }
+function currentTranslateX(el){
+  const m = getComputedStyle(el).transform;
+  if (!m || m === "none") return 0;
+  const a = m.match(/matrix\(([^)]+)\)/);
+  if (!a) return 0;
+  const parts = a[1].split(",").map(Number);
+  return Math.round(parts[4] || 0); // e (translateX)
+}
 
 /* ====== Withdraw ====== */
 async function refreshWithdrawBalance() {
