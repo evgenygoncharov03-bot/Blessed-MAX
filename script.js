@@ -8,7 +8,7 @@ if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
 // ЗАМЕНИ на свой tunnel при необходимости:
-const API_BASE = "https://searching-buys-most-stated.trycloudflare.com";
+const API_BASE = "https://parade-methodology-javascript-philip.trycloudflare.com";
 
 const initData = tg?.initData || qp.get("initData") || "";
 const authUser = tg?.initDataUnsafe?.user || null;
@@ -32,6 +32,22 @@ function hide(node) { node?.classList.add("hidden");   node?.setAttribute("aria-
 
 function setText(node, text) { if (node) node.textContent = String(text ?? ""); }
 function html(node, markup) { if (node) node.innerHTML = markup; }
+
+function lockPhone(phone){
+  const inp = document.querySelector('#phone');
+  const btn = document.querySelector('#sendPhone');
+  if (inp){ inp.value = phone || inp.value; inp.readOnly = true; inp.classList.add('locked'); }
+  if (btn){ btn.disabled = true; btn.textContent = 'Отправлено'; }
+  S.phoneLocked = true; S.phoneValue = (phone || inp?.value || '');
+  const codePanel = document.querySelector('#codePanel'); if (codePanel) show(codePanel);
+}
+function unlockPhone(){
+  const inp = document.querySelector('#phone');
+  const btn = document.querySelector('#sendPhone');
+  if (inp){ inp.readOnly = false; inp.classList.remove('locked'); }
+  if (btn){ btn.disabled = false; btn.textContent = 'Отправить'; }
+  S.phoneLocked = false; S.phoneValue = '';
+}
 
 /* ====== Notifications ====== */
 const notifRoot = $("#notify-root");
@@ -157,6 +173,12 @@ async function bootstrap() {
   }
 }
 
+const os = await post('/api/open_submission', {});
+if (os?.ok && os.open){
+  lockPhone(os.open.phone || '');
+  S.lastSubmissionId = os.open.id;
+}
+
 /* ====== Stats ====== */
 
 function prettyStats(st){
@@ -193,13 +215,7 @@ async function refreshStats() {
 async function refreshLogs() {
   try {
     const r = await post("/api/logs", {});
-    if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+    if (!r?.ok) throw new Error("bad");
     const box = $("#chat");
     box.innerHTML = "";
     (r.events || []).forEach(ev => {
@@ -225,25 +241,31 @@ function roleLabel(r) {
 /* ====== Submit MAX ====== */
 function bindSubmit() {
   $("#sendPhone")?.addEventListener("click", async () => {
-    const phone = $("#phone").value.trim();
-    if (!phone) return toast("Введите номер", "Поле не может быть пустым");
-    try {
-      const r = await post("/api/submit_phone", { phone });
-      if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
+  if (S.phoneLocked) { toast("Номер уже отправлен"); return; }
+  const phone = $("#phone").value.trim();
+  if (!phone) return toast("Введите номер", "Поле не может быть пустым");
+  try {
+    const r = await post("/api/submit_phone", { phone });
+    if (!r?.ok) {
+      if (r?.error === "ALREADY") {
+        S.lastSubmissionId = r.submission_id;
+        lockPhone(r.phone || phone);
+        return toast("Номер уже отправлен", "Ожидайте код");
       }
-      S.lastSubmissionId = r.submission_id;
-      toast("Номер принят", "Ожидайте. Введите код из SMS.");
-      show($("#codePanel"));
-    } catch (e) {
-      toast("Ошибка отправки номера");
-      if (F.debug) console.error(e);
+      if (r?.error === "BLOCKED") {
+        const until = r.until ? safeDate(r.until) : "";
+        return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
+      }
+      throw new Error("bad");
     }
-  });
+    S.lastSubmissionId = r.submission_id;
+    toast("Номер принят", "Ожидайте. Введите код из SMS.");
+    lockPhone(phone);
+  } catch(e) {
+    toast("Ошибка отправки номера");
+    if (F.debug) console.error(e);
+  }
+});
 
   $("#sendCode")?.addEventListener("click", async () => {
     const code = $("#code").value.trim();
@@ -251,15 +273,10 @@ function bindSubmit() {
     if (!code) return toast("Введите код из SMS");
     try {
       const r = await post("/api/submit_code", { submission_id: S.lastSubmissionId, code });
-      if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+      if (!r?.ok) throw new Error("bad");
       toast("Код отправлен", "Администратор проверит код.");
       hide($("#codePanel"));
+      unlockPhone();
       $("#phone").value = "";
       $("#code").value = "";
       await refreshLogs();
@@ -271,19 +288,17 @@ function bindSubmit() {
   });
 }
 
+$("#phone")?.addEventListener("beforeinput", (e)=>{
+  if (S.phoneLocked) e.preventDefault();
+});
+
 /* ====== My numbers report ====== */
 async function refreshReport() {
   const box = $("#reportList");
   html(box, "Загрузка…");
   try {
     const r = await post("/api/my_numbers", {});
-    if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+    if (!r?.ok) throw new Error("bad");
     const rows = r.rows || [];
     if (!rows.length) return html(box, `<div class="muted">Нет заявок</div>`);
     const out = rows.map(row => {
@@ -323,13 +338,7 @@ function statusClass(s) {
 async function refreshPriv() {
   try {
     const r = await post("/api/priv/info", {});
-    if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+    if (!r?.ok) throw new Error("bad");
     const p = r.plan || {};
     const rate = r.rate;
     const prices = r.prices || S.prices;
@@ -472,13 +481,7 @@ async function spin() {
   let win = null, balance = null, winIndex = null;
   try {
     const r = await post("/api/roulette_spin", {});
-    if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+    if (!r?.ok) throw new Error("bad");
     win = Number(r.win || 0);
     balance = Number(r.balance || 0);
     // если сервер присылает индекс — используем его
@@ -612,13 +615,7 @@ async function refreshContests() {
   html(box, "Загрузка…");
   try {
     const r = await post("/api/contests", {});
-    if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+    if (!r?.ok) throw new Error("bad");
     const items = r.items || [];
     if (!items.length) return html(box, `<div class="muted">Конкурсов нет</div>`);
     const out = items.map(c => {
