@@ -8,7 +8,7 @@ if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
 // ЗАМЕНИ на свой tunnel при необходимости:
-const API_BASE = "https://parade-methodology-javascript-philip.trycloudflare.com";
+const API_BASE = "https://searching-buys-most-stated.trycloudflare.com";
 
 const initData = tg?.initData || qp.get("initData") || "";
 const authUser = tg?.initDataUnsafe?.user || null;
@@ -768,3 +768,4 @@ function confirmModal(title, content, okText="Купить", cancelText="Отм�
     }
   });
 }
+
