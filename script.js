@@ -459,7 +459,7 @@ async function confirmBuy(plan) {
   }
 }
 
-/* ====== Roulette (fixed center align) ====== */
+/* ====== Roulette (multi-layer, exact landing) ====== */
 let rouletteReady = false;
 const PRIZES = [
   {v:0.10, icon:"🟦", cls:"r-cmn"},
@@ -476,25 +476,40 @@ const PRIZES = [
   {v:1.20, icon:"💎", cls:"r-legend"},
   {v:1.30, icon:"💎", cls:"r-legend"}
 ];
-const RU_REPEAT = 8;
+
+// начальное количество «слоёв» (повторов), дальше расширяем динамически
+let ruRepeats = 0;
 let ruStripBuilt = false;
 
 function setupRouletteOnce() {
   if (rouletteReady) return;
   rouletteReady = true;
-  buildRouletteStrip();
+  buildRouletteStrip(16); // много слоёв сразу
   $("#ru-spin")?.addEventListener("click", spin);
 }
 
-function buildRouletteStrip() {
+function buildRouletteStrip(repeats = 12) {
   const strip = $("#case-strip");
-  if (!strip || ruStripBuilt) return;
+  if (!strip) return;
   const chunk = PRIZES.map(p =>
     `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`
   ).join("");
-  strip.innerHTML = new Array(RU_REPEAT).fill(chunk).join("");
+  strip.innerHTML = chunk.repeat(repeats);
   strip.style.transform = "translateX(0px)";
+  ruRepeats = repeats;
   ruStripBuilt = true;
+}
+
+// гарантируем, что лента достаточно длинная под заданный индекс
+function ensureRepeats(minRepeatsNeeded) {
+  const strip = $("#case-strip");
+  if (!strip || minRepeatsNeeded <= ruRepeats) return;
+  const chunk = PRIZES.map(p =>
+    `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`
+  ).join("");
+  const add = minRepeatsNeeded - ruRepeats;
+  strip.insertAdjacentHTML("beforeend", chunk.repeat(add));
+  ruRepeats = minRepeatsNeeded;
 }
 
 function measure() {
@@ -505,16 +520,25 @@ function measure() {
   const cs = getComputedStyle(strip);
   const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
   const padL = parseFloat(cs.paddingLeft || "0") || 0;
-  const tileW = first.getBoundingClientRect().width;           // фактическая ширина
-  const stride = tileW + gap;                                  // шаг с учётом gap
+  const tileW = first.getBoundingClientRect().width;
+  const stride = tileW + gap;
   const pointerX = Math.round(wrap.getBoundingClientRect().width / 2);
-  return { wrap, strip, tileW, stride, padL, pointerX };
+  const visibleCount = Math.ceil(wrap.getBoundingClientRect().width / stride) + 2;
+  return { wrap, strip, tileW, stride, padL, pointerX, visibleCount };
+}
+
+function prizeIndexForWin(win, winIndex) {
+  if (Number.isInteger(winIndex)) return clampIndex(winIndex, 0, PRIZES.length - 1);
+  const exact = PRIZES.findIndex(p => Math.abs(p.v - Number(win)) < 1e-9);
+  if (exact >= 0) return exact;
+  return nearestPrizeIndex(PRIZES.map(p => p.v), Number(win));
 }
 
 async function spin() {
+  if (!ruStripBuilt) buildRouletteStrip(16);
   const m = measure();
   if (!m) return;
-  const { wrap, strip, tileW, stride, padL, pointerX } = m;
+  const { wrap, strip, tileW, stride, padL, pointerX, visibleCount } = m;
   const resBox = $("#ru-result");
   const btn = $("#ru-spin");
 
@@ -524,43 +548,36 @@ async function spin() {
   wrap.classList.add("spinning");
   setText(resBox, "Крутится…");
 
-  // ask server
-  let win = null, balance = null, winIndex = null;
+  // запрос результата у сервера
+  let win = 0, balance = 0, baseIdx = 0;
   try {
     const r = await post("/api/roulette_spin", {});
-    if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
-      }
+    if (!r?.ok) throw new Error("bad");
     win = Number(r.win || 0);
     balance = Number(r.balance || 0);
-    // если сервер присылает индекс — используем его
-    if (Number.isInteger(r.win_index)) winIndex = Number(r.win_index);
-  } catch (e) {
-    toast("Спин недоступен", "Пополните баланс или повторите позже");
-    unlock();
-    return;
+    baseIdx = prizeIndexForWin(win, r.win_index);
+  } catch {
+    toast("Спин недоступен", "Повторите позже");
+    return unlock();
   }
 
-  const baseIdx = Number.isInteger(winIndex)
-    ? clampIndex(winIndex, 0, PRIZES.length - 1)
-    : nearestPrizeIndex(PRIZES.map(p => p.v), win);
-
-  const totalItems = PRIZES.length * RU_REPEAT;
+  // сколько циклов прокрутки делаем
   const cycles = 7 + Math.floor(Math.random() * 3); // 7..9
   const targetIndex = cycles * PRIZES.length + baseIdx;
 
-  // точный центр плитки baseIdx под центральным указателем:
+  // убедимся, что лента достаточно длинная под targetIndex и видимую область
+  const itemsNeeded = targetIndex + Math.ceil(visibleCount / 2) + 2;
+  const repeatsNeeded = Math.ceil(itemsNeeded / PRIZES.length);
+  ensureRepeats(repeatsNeeded);
+
+  // точный центр плитки baseIdx под центральным указателем
   const targetCenter = padL + targetIndex * stride + tileW / 2;
   const target = Math.round(targetCenter - pointerX);
 
-  // animate to exact pixel
+  // анимация к точному пикселю
   const dur = 3200;
   const start = performance.now();
-  const startX = currentTranslateX(strip); // вдруг пользователь крутил ранее
+  const startX = currentTranslateX(strip);
   const delta = -target - startX;
 
   strip.style.willChange = "transform";
@@ -574,14 +591,10 @@ async function spin() {
   });
 
   function onStop() {
-    // финальная фиксация на точное значение
+    // финальная фиксация
     strip.style.transform = `translateX(${-target}px)`;
-    // короткий визуальный отклик без смещения центра
-    strip.animate(
-      [{ transform: `translateX(${-target}px)` }, { transform: `translateX(${-target}px)` }],
-      { duration: 200 }
-    );
 
+    // показываем ровно тот приз, что пришёл с сервера
     setText(resBox, `Выигрыш: $${fmtMoney(win)}`);
     toast("Результат", `$${fmtMoney(win)} • Баланс $${fmtMoney(balance)}`);
     refreshWithdrawBalance();
@@ -612,7 +625,7 @@ function currentTranslateX(el){
   const a = m.match(/matrix\(([^)]+)\)/);
   if (!a) return 0;
   const parts = a[1].split(",").map(Number);
-  return Math.round(parts[4] || 0); // e (translateX)
+  return Math.round(parts[4] || 0);
 }
 
 /* ====== Withdraw ====== */
@@ -827,3 +840,4 @@ function confirmModal(title, content, okText="Купить", cancelText="Отм�
     }
   });
 }
+
