@@ -7,6 +7,7 @@ const tg = window.Telegram?.WebApp || null;
 if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
+// ЗАМЕНИ на свой tunnel при необходимости:
 const API_BASE = "https://parade-methodology-javascript-philip.trycloudflare.com";
 
 const initData = tg?.initData || qp.get("initData") || "";
@@ -110,6 +111,10 @@ const screens = {
   withdraw: $("#screen-withdraw"),
   contests: $("#screen-contests"),
 };
+
+// Делает внутренний скролл на всех экранах, кроме главного меню
+Object.values(screens).forEach(s => s?.classList?.add("scrollable"));
+screens.menu?.classList?.remove("scrollable");
 
 function goto(name) {
   Object.values(screens).forEach(hide);
@@ -354,18 +359,17 @@ $("#std-activate")?.addEventListener("click", async () => {
 });
 
 async function confirmBuy(plan, price) {
-  const ok = window.confirm(`Купить тариф ${plan} за $${fmtMoney(price)}?`);
-  if (!ok) return;
   try {
-    const r = await post("/api/priv/buy", { plan });
+    const r = await post("/api/priv/buy", { plan }); // без window.confirm
     if (r?.ok) {
       toast("Тариф активирован", plan);
-      await refreshPriv(); await refreshWithdrawBalance();
+      await refreshPriv();           // обновит текст кнопок на "Активирован"
+      await refreshWithdrawBalance();
     } else {
       toast("Покупка не удалась");
     }
   } catch (e) {
-    if (e.message.includes("NO_FUNDS")) toast("Недостаточно средств");
+    if (String(e.message || "").includes("NO_FUNDS")) toast("Недостаточно средств");
     else toast("Ошибка покупки тарифа");
     if (F.debug) console.error(e);
   }
@@ -641,4 +645,3 @@ function confirmModal(title, content, okText="Купить", cancelText="Отм�
     }
   });
 }
-
