@@ -211,6 +211,16 @@ pre{
 .contest-card .title{font-weight:800; font-size:16px}
 .contest-card .prize{font-weight:700}
 
+/* Leaderboard */
+.lb { display:grid; gap:8px; margin-top:8px; max-height:50vh; overflow:auto; -webkit-overflow-scrolling:touch }
+.lb-row { display:grid; grid-template-columns:40px 1fr auto; gap:8px; align-items:center;
+  background:#0f1728; border:1px solid #20314a; border-radius:10px; padding:8px 10px }
+.lb-row.me { border-color:#3aa7ff }
+.lb-row .pos{ font-weight:800 }
+.lb-row .name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.lb-row .mins{ font-weight:800 }
+.lb-me{ font-weight:800; margin:4px 0 }
+
 /* Withdraw */
 #screen-withdraw .muted{font-size:13px}
 
