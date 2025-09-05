@@ -462,19 +462,33 @@ async function confirmBuy(plan) {
 /* ====== Roulette (multi-layer, exact landing) ====== */
 let rouletteReady = false;
 const PRIZES = [
-  {v:0.10, icon:"🟦", cls:"r-cmn"},
-  {v:0.20, icon:"🟦", cls:"r-cmn"},
-  {v:0.30, icon:"🟪", cls:"r-uc"},
-  {v:0.40, icon:"🟦", cls:"r-cmn"},
-  {v:0.50, icon:"🟨", cls:"r-rare"},
-  {v:0.60, icon:"🟦", cls:"r-cmn"},
-  {v:0.70, icon:"🟪", cls:"r-uc"},
-  {v:0.80, icon:"⚡",  cls:"r-rare"},
-  {v:0.90, icon:"🟦", cls:"r-cmn"},
-  {v:1.00, icon:"💠", cls:"r-uc"},
-  {v:1.10, icon:"🎁", cls:"r-rare"},
-  {v:1.20, icon:"💎", cls:"r-legend"},
-  {v:1.30, icon:"💎", cls:"r-legend"}
+  {v:0.50, icon:"🟦", cls:"r-cmn"},
+  {v:0.75, icon:"🟦", cls:"r-cmn"},
+  {v:1.00, icon:"🟦", cls:"r-cmn"},
+  {v:1.25, icon:"🟦", cls:"r-cmn"},
+  {v:1.50, icon:"🟦", cls:"r-cmn"},
+  {v:1.75, icon:"🟦", cls:"r-cmn"},
+  {v:2.00, icon:"🟦", cls:"r-cmn"},
+  {v:2.50, icon:"🟪", cls:"r-uc"},
+  {v:3.00, icon:"🟪", cls:"r-uc"},
+  {v:3.50, icon:"🟪", cls:"r-uc"},
+  {v:4.00, icon:"🟨", cls:"r-rare"},
+  {v:4.50, icon:"🟨", cls:"r-rare"},
+  {v:5.00, icon:"🟨", cls:"r-rare"},
+  {v:6.00, icon:"⚡",  cls:"r-rare"},
+  {v:7.00, icon:"⚡",  cls:"r-rare"},
+  {v:8.00, icon:"⚡",  cls:"r-rare"},
+  {v:9.00, icon:"⚡",  cls:"r-rare"},
+  {v:10.00,icon:"💠", cls:"r-uc"},
+  {v:12.00,icon:"💠", cls:"r-uc"},
+  {v:15.00,icon:"💠", cls:"r-uc"},
+  {v:20.00,icon:"💠", cls:"r-uc"},
+  {v:25.00,icon:"💎", cls:"r-legend"},
+  {v:30.00,icon:"💎", cls:"r-legend"},
+  {v:40.00,icon:"💎", cls:"r-legend"},
+  {v:50.00,icon:"💎", cls:"r-legend"},
+  {v:75.00,icon:"💎", cls:"r-legend"},
+  {v:100.00,icon:"💎", cls:"r-legend"}
 ];
 
 // начальное количество «слоёв» (повторов), дальше расширяем динамически
@@ -840,4 +854,5 @@ function confirmModal(title, content, okText="Купить", cancelText="Отм�
     }
   });
 }
+
 
