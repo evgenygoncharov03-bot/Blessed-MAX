@@ -569,6 +569,8 @@ $("#wdCancel")?.addEventListener("click", async () => {
 });
 
 /* ====== Contests ====== */
+let LB_TIMER = null;
+
 async function refreshContests() {
   const box = $("#contestList");
   html(box, "Загрузка…");
@@ -579,12 +581,16 @@ async function refreshContests() {
     if (!items.length) return html(box, `<div class="muted">Конкурсов нет</div>`);
     const out = items.map(c => {
       const until = c.until ? `<div class="muted">До: ${escapeHtml(c.until)}</div>` : "";
-      return `<div class="contest-card">
+      const joined = c.joined ? `<span class="ok">• Вы участвуете</span>` : "";
+      return `<div class="contest-card" data-id="${c.id}">
         <div class="title">${escapeHtml(c.title)}</div>
-        <div class="prize">Приз: ${escapeHtml(c.prize)}</div>
+        <div class="prize">Приз: ${escapeHtml(c.prize)} ${joined}</div>
         ${until}
         <div class="muted">Участников: ${Number(c.entries || 0)}</div>
-        <button class="join" data-id="${c.id}">Участвовать</button>
+        <div class="row">
+          <button class="join" data-id="${c.id}" ${c.joined ? "disabled":""}>${c.joined?"Участвуете":"Участвовать"}</button>
+          <button class="leaders" data-id="${c.id}">Таблица</button>
+        </div>
       </div>`;
     }).join("");
     html(box, out);
@@ -595,19 +601,67 @@ async function refreshContests() {
 }
 
 $("#screen-contests")?.addEventListener("click", async (e) => {
-  const b = e.target.closest("button.join");
-  if (!b) return;
-  const cid = Number(b.dataset.id);
-  try {
-    const r = await post("/api/contest_join", { contest_id: cid });
-    if (r?.ok) toast("Вы участвовали", "Удачи");
-    else if (r?.error === "ALREADY") toast("Вы уже участвуете");
-    else if (r?.error === "CLOSED") toast("Конкурс закрыт");
-    else toast("Ошибка участия");
-  } catch (e2) {
-    toast("Ошибка участия");
+  const join = e.target.closest("button.join");
+  const lead = e.target.closest("button.leaders");
+  if (join) {
+    const cid = Number(join.dataset.id);
+    try {
+      const r = await post("/api/contest_join", { contest_id: cid });
+      if (r?.ok) {
+        toast("Участие принято", "Минуты будут считаться с этого момента");
+        await refreshContests();
+      } else if (r?.error === "ALREADY") toast("Вы уже участвуете");
+      else if (r?.error === "CLOSED") toast("Конкурс закрыт");
+      else toast("Ошибка участия");
+    } catch {
+      toast("Ошибка участия");
+    }
+  }
+  if (lead) {
+    const cid = Number(lead.dataset.id);
+    openLeaderboard(cid);
   }
 });
+
+async function openLeaderboard(cid){
+  clearInterval(LB_TIMER);
+  const dlg = $("#notify-modal");
+  const titleEl = $("#notify-title");
+  const contentEl = $("#notify-content");
+  $("#notify-close").onclick = () => { hide(dlg); clearInterval(LB_TIMER); };
+
+  titleEl.textContent = `Таблица конкурса #${cid}`;
+  show(dlg);
+
+  async function loadOnce(){
+    try{
+      const r = await post("/api/contest_leaderboard", { contest_id: cid });
+      if (!r?.ok) throw 0;
+      const rows = r.rows || [];
+      if (!rows.length){
+        contentEl.innerHTML = `<div class="muted">Пока нет участников</div>`;
+        return;
+      }
+      const meRow = rows.find(x => x.me);
+      const list = rows.map(row => `
+        <div class="lb-row ${row.me?"me":""}">
+          <div class="pos">#${row.rank}</div>
+          <div class="name">${escapeHtml(row.username || ("id"+row.user_id))}</div>
+          <div class="mins">${row.minutes} мин</div>
+        </div>`).join("");
+      contentEl.innerHTML = `
+        ${meRow ? `<div class="lb-me">Ваше место: #${meRow.rank} • ${meRow.minutes} мин</div>`:""}
+        <div class="lb">${list}</div>`;
+    }catch{
+      contentEl.innerHTML = `<div class="err">Ошибка загрузки таблицы</div>`;
+    }
+  }
+  await loadOnce();
+  LB_TIMER = setInterval(() => {
+    if (dlg.classList.contains("hidden")) { clearInterval(LB_TIMER); return; }
+    loadOnce();
+  }, 10000);
+}
 
 /* ====== Utilities ====== */
 function fmtMoney(n) {
