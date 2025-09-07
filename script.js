@@ -2,13 +2,22 @@
 /* Robust Telegram WebApp client for index.html.
    Works with aiohttp API from bot.py and schema in db.py. */
 
-/* ====== Config ====== */
+// ====== Config & State ======
 const tg = window.Telegram?.WebApp || null;
 if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
-// ЗАМЕНИ на свой tunnel при необходимости:
-const API_BASE = "https://grid-elliott-changing-twisted.trycloudflare.com";
+const API_BASE = "https://commitment-recommended-endif-awful.trycloudflare.com";
+
+const S = {
+  lastSubmissionId: null,
+  stats: null,
+  prices: { premium: 40.0, speed: 30.0 },
+  phoneLocked: false,
+  phoneValue: "",
+  priv: { rate: 0.18, plan: null },
+  is_admin: false,
+};
 
 const initData = tg?.initData || qp.get("initData") || "";
 const authUser = tg?.initDataUnsafe?.user || null;
@@ -112,6 +121,7 @@ const screens = {
   roulette: $("#screen-roulette"),
   withdraw: $("#screen-withdraw"),
   contests: $("#screen-contests"),
+  admin: $("#screen-admin"),          // ← добавить
 };
 
 // Делает внутренний скролл на всех экранах, кроме главного меню
@@ -375,52 +385,71 @@ function statusClass(s) {
   return "";
 }
 
+function updateROI(){
+  const mins = Number($("#roi-mins")?.value || 0);
+  const succ = Number($("#roi-succ")?.value || 0);
+  const rate = Number(S.priv.rate || 0.18);
+  const plan = $("input[name='roi-plan']:checked")?.value || "premium";
+  const price = Number(S.prices[plan] || 0);
+  if (!(mins>0 && succ>0 && rate>0 && price>0)) { setText($("#roi-out"), "—"); return; }
+  const earnPerDay = mins * rate * succ;
+  const days = Math.ceil(price / Math.max(earnPerDay, 0.0001));
+  setText($("#roi-out"), `${days} дн. • ~$${fmtMoney(earnPerDay)}/день`);
+}
+$("#roi-mins")?.addEventListener("input", updateROI);
+$("#roi-succ")?.addEventListener("input", updateROI);
+$$("input[name='roi-plan']").forEach(r => r.addEventListener("change", updateROI));
+
 /* ====== Privileges ====== */
 async function refreshPriv() {
   try {
     const r = await post("/api/priv/info", {});
     if (!r?.ok) {
-        if (r?.error === "BLOCKED") {
-          const until = r.until ? safeDate(r.until) : "";
-          return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
-        }
-        throw new Error("bad");
+      if (r?.error === "BLOCKED") {
+        const until = r.until ? safeDate(r.until) : "";
+        return alertModal("Блокировка", `Вы временно заблокированы. До: ${until}`);
       }
-    const p = r.plan || {};
-    const rate = r.rate;
-    const prices = r.prices || S.prices;
-    S.prices = prices;
+      throw new Error("bad");
+    }
 
-    setText($("#price-premium"), `$${fmtMoney(prices.premium)}`);
-    setText($("#price-speed"), `$${fmtMoney(prices.speed)}`);
+    const p = r.plan || {};
+    const rate = Number(r.rate || 0);
+    const prices = r.prices || S.prices;
+
+    S.prices = prices;
+    S.priv = { rate, plan: p };
+    S.is_admin = !!r.is_admin;
+
+    const season = r.season ? ` (${r.season})` : "";
+    setText($("#price-premium"), `$${fmtMoney(prices.premium)}${season}`);
+    setText($("#price-speed"), `$${fmtMoney(prices.speed)}${season}`);
+
     const summary = `Тариф: ${p.plan || "—"} • Ставка: $${fmtMoney(rate)} • Действует до: ${p.plan_until || "—"}`;
     setText($("#privSummary"), summary);
 
-    const active = (p.plan || "").toLowerCase();
-    const bp = $("#buy-premium");
-    const bs = $("#buy-speed");
-    const std = $("#std-activate");
+    const adminBtn = $("#menu-admin");
+    if (adminBtn) adminBtn.classList.toggle("hidden", !S.is_admin);
 
-    function setPlanBtn(btn, isActive){
-      if (!btn) return;
-      if (isActive){
-        btn.textContent = "Активирован";
-        btn.disabled = true;
-        btn.classList.add("active");
-      } else {
-        btn.textContent = "Купить";
-        btn.disabled = false;
-        btn.classList.remove("active");
-      }
-    }
-    setPlanBtn(bp, active === "premium");
-    setPlanBtn(bs, active === "speed");
+    if ($("#roi-mins")) $("#roi-mins").value = 60;
+    if ($("#roi-succ")) $("#roi-succ").value = 0.7;
+    if (typeof updateROI === "function") updateROI();
+
+    const active = (p.plan || "").toLowerCase();
+    setPlanBtn($("#buy-premium"), active === "premium");
+    setPlanBtn($("#buy-speed"), active === "speed");
+    const std = $("#std-activate");
     if (std) std.textContent = active === "standard" ? "Активный" : "Активировать";
-    
   } catch (e) {
     setText($("#privSummary"), "Ошибка загрузки тарифов");
-    if (F.debug) console.error(e);
+    if (F?.debug) console.error(e);
   }
+}
+
+function setPlanBtn(btn, isActive){
+  if (!btn) return;
+  btn.textContent = isActive ? "Активирован" : "Купить";
+  btn.disabled = !!isActive;
+  btn.classList.toggle("active", !!isActive);
 }
 
 $("#buy-premium")?.addEventListener("click", () => confirmBuy("premium"));
@@ -441,92 +470,79 @@ $("#std-activate")?.addEventListener("click", async () => {
 });
 
 async function confirmBuy(plan) {
+  const code = ($("#promo")?.value || "").trim();
   try {
-    const r = await post("/api/priv/buy", { plan });
+    const r = await post("/api/priv/buy", { plan, promo: code || undefined });
     if (r?.ok) {
-      toast("Поздравляем с покупкой", "Тариф активирован");
-      await refreshPriv();
-      await refreshWithdrawBalance();
+      const msg = r.promo?.startsWith("OK") ? `со скидкой (${r.promo})` : "";
+      toast("Покупка успешна", `Оплата $${fmtMoney(r.paid)} ${msg}`);
+      await refreshPriv(); await refreshWithdrawBalance();
     } else {
-      const err = String(r?.error || "");
-      if (err.includes("NO_FUNDS")) toast("Недостаточно средств");
-      else toast("Покупка не удалась");
+      toast("Покупка не удалась");
     }
   } catch (e) {
-    if (String(e.message || "").includes("NO_FUNDS")) toast("Недостаточно средств");
-    else toast("Покупка не удалась");
-    if (F.debug) console.error(e);
+    toast(e.message.includes("NO_FUNDS") ? "Недостаточно средств" : "Покупка не удалась");
   }
 }
 
-/* ====== Roulette (multi-layer, SHUFFLED each spin, exact landing) ====== */
+// ===== Admin Panel (read-only minimal) =====
+function bindAdmin(){
+  $("#menu-admin")?.addEventListener("click", ()=>{ goto("admin"); refreshAdmin(); });
+  $("#admin-refresh")?.addEventListener("click", refreshAdmin);
+}
+async function refreshAdmin(){
+  if (!S.is_admin) return alertModal("Нет прав","Доступ только для админов");
+  try{
+    const [q,h] = await Promise.all([post("/api/admin/queue",{}), post("/api/admin/holds",{})]);
+    html($("#admin-queue"), (q.items||[]).map(it => `<div class="row"><b>#${it.id}</b> uid${it.user_id} ${escapeHtml(it.phone||"")} <span class="muted">${it.status}</span></div>`).join("") || "<div class=muted>Пусто</div>");
+    html($("#admin-holds"), (h.items||[]).map(it => `<div class="row">HOLD #${it.id} uid${it.user_id} ${escapeHtml(it.phone||"")}</div>`).join("") || "<div class=muted>Нет активных</div>");
+  }catch{ toast("Ошибка админ-API"); }
+}
+
+// ==== call once after DOM ====
+bindAdmin();
+
+/* ====== Roulette (multi-layer, exact landing) ====== */
 let rouletteReady = false;
 
-// оставьте свой список призов как есть
-const PRIZES = [
-  {v:0.50, icon:"🟦", cls:"r-cmn"},
-  {v:0.75, icon:"🟦", cls:"r-cmn"},
-  {v:1.00, icon:"🟦", cls:"r-cmn"},
-  {v:1.25, icon:"🟦", cls:"r-cmn"},
-  {v:1.50, icon:"🟦", cls:"r-cmn"},
-  {v:1.75, icon:"🟦", cls:"r-cmn"},
-  {v:2.00, icon:"🟦", cls:"r-cmn"},
-  {v:2.50, icon:"🟪", cls:"r-uc"},
-  {v:3.00, icon:"🟪", cls:"r-uc"},
-  {v:3.50, icon:"🟪", cls:"r-uc"},
-  {v:4.00, icon:"🟨", cls:"r-rare"},
-  {v:4.50, icon:"🟨", cls:"r-rare"},
-  {v:5.00, icon:"🟨", cls:"r-rare"},
-  {v:6.00, icon:"⚡",  cls:"r-rare"},
-  {v:7.00, icon:"⚡",  cls:"r-rare"},
-  {v:8.00, icon:"⚡",  cls:"r-rare"},
-  {v:9.00, icon:"⚡",  cls:"r-rare"},
-  {v:10.00,icon:"💠", cls:"r-uc"},
-  {v:12.00,icon:"💠", cls:"r-uc"},
-  {v:15.00,icon:"💠", cls:"r-uc"},
-  {v:20.00,icon:"💠", cls:"r-uc"},
-  {v:25.00,icon:"💎", cls:"r-legend"},
-  {v:30.00,icon:"💎", cls:"r-legend"},
-  {v:40.00,icon:"💎", cls:"r-legend"},
-  {v:50.00,icon:"💎", cls:"r-legend"},
-  {v:75.00,icon:"💎", cls:"r-legend"},
-  {v:100.00,icon:"💎", cls:"r-legend"}
-];
-
-// текущий видимый порядок плиток
-let RU_ORDER = [];
+// начальное количество «слоёв» (повторов), дальше расширяем динамически
 let ruRepeats = 0;
 let ruStripBuilt = false;
-
-function shuffle(a){
-  for (let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
-  }
-  return a;
-}
 
 function setupRouletteOnce() {
   if (rouletteReady) return;
   rouletteReady = true;
-  buildRouletteStrip(16, true);
-  $("#ru-spin")?.addEventListener("click", spin);
-}
+  buildRouletteSt/* ====== Roulette (multi-layer, SHUFFLED each spin, exact landing) ====== */
 
-function buildRouletteStrip(repeats = 12, reshuffle = false) {
-  const strip = $("#case-strip");
-  if (!strip) return;
-  if (reshuffle || RU_ORDER.length !== PRIZES.length) {
-    RU_ORDER = shuffle([...PRIZES]); // новый порядок каждый раз
-  }
-  const chunk = RU_ORDER.map(p =>
-    `<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`
-  ).join("");
-  strip.innerHTML = chunk.repeat(repeats);
-  strip.style.transform = "translateX(0px)";
-  ruRepeats = repeats;
-  ruStripBuilt = true;
-}
+// оставьте свой список призов как есть
+let rouletteReady = false;
+const PRIZES = [
+  {v:0.50, icon:"🟦", cls:"r-cmn"}, {v:0.75, icon:"🟦", cls:"r-cmn"},
+  {v:1.00, icon:"🟦", cls:"r-cmn"}, {v:1.25, icon:"🟦", cls:"r-cmn"},
+  {v:1.50, icon:"🟦", cls:"r-cmn"}, {v:1.75, icon:"🟦", cls:"r-cmn"},
+  {v:2.00, icon:"🟦", cls:"r-cmn"}, {v:2.50, icon:"🟪", cls:"r-uc"},
+  {v:3.00, icon:"🟪", cls:"r-uc"},  {v:3.50, icon:"🟪", cls:"r-uc"},
+  {v:4.00, icon:"🟨", cls:"r-rare"},{v:4.50, icon:"🟨", cls:"r-rare"},
+  {v:5.00, icon:"🟨", cls:"r-rare"},{v:6.00, icon:"⚡",  cls:"r-rare"},
+  {v:7.00, icon:"⚡",  cls:"r-rare"},{v:8.00, icon:"⚡",  cls:"r-rare"},
+  {v:9.00, icon:"⚡",  cls:"r-rare"},{v:10.00,icon:"💠", cls:"r-uc"},
+  {v:12.00,icon:"💠", cls:"r-uc"},  {v:15.00,icon:"💠", cls:"r-uc"},
+  {v:20.00,icon:"💠", cls:"r-uc"},  {v:25.00,icon:"💎", cls:"r-legend"},
+  {v:30.00,icon:"💎", cls:"r-legend"},{v:40.00,icon:"💎", cls:"r-legend"},
+  {v:50.00,icon:"💎", cls:"r-legend"},{v:75.00,icon:"💎", cls:"r-legend"},
+  {v:100.00,icon:"💎", cls:"r-legend"}
+];
+let RU_ORDER = [], ruRepeats = 0;
+let ruStripBuilt = false;
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function setupRouletteOnce(){ if(rouletteReady) return; rouletteReady=true; buildRouletteStrip(16, true); $("#ru-spin")?.addEventListener("click", spin); }
+function buildRouletteStrip(repeats=12, reshuffle=false){
+  const strip=$("#case-strip"); if(!strip) return;
+  if(reshuffle||RU_ORDER.length!==PRIZES.length) RU_ORDER = shuffle([...PRIZES]);
+  const chunk = RU_ORDER.map(p=>`<div class="case-item ${p.cls}"><div class="ico">${p.icon}</div><div class="amt">$${fmtMoney(p.v)}</div></div>`).join("");
+  strip.innerHTML = chunk.repeat(repeats); strip.style.transform="translateX(0px)"; ruRepeats=repeats;
+}// текущий видимый порядок плиток
 
 function ensureRepeats(minRepeatsNeeded) {
   const strip = $("#case-strip");
@@ -739,7 +755,7 @@ $("#screen-contests")?.addEventListener("click", async (e) => {
   if (join) {
     const cid = Number(join.dataset.id);
     try {
-      const r = await post("/api/contest_join", { contest_id: cid });
+      const r = await post("/api/contest/join", { contest_id: cid });
       if (r?.ok) {
         toast("Участие принято", "Минуты будут считаться с этого момента");
         await refreshContests();
@@ -768,7 +784,7 @@ async function openLeaderboard(cid){
 
   async function loadOnce(){
     try{
-      const r = await post("/api/contest_leaderboard", { contest_id: cid });
+      const r = await post("/api/contest/leaderboard", { contest_id: cid });
       if (!r?.ok) throw 0;
       const rows = r.rows || [];
       if (!rows.length){
@@ -862,7 +878,3 @@ function confirmModal(title, content, okText="Купить", cancelText="Отм�
     }
   });
 }
-
-
-
-
