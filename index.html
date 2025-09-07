@@ -26,6 +26,10 @@
     <h2 style="margin:0 0 8px">LOG CHAT</h2>
     <div id="chat" class="chat"></div>
     <div class="row"><button id="refreshLogs">Обновить</button></div>
+
+    <h2 style="margin:12px 0 8px">История выводов</h2>
+    <div id="payoutTape" class="list"></div>
+    <div class="row"><button id="payoutTapeRefresh">Обновить ленту</button></div>
   </div>
 
   <div id="screen-stats" class="card hidden" aria-hidden="true">
@@ -148,6 +152,25 @@
     <div id="admin-queue" class="list"></div>
     <h3>Активные HOLD</h3>
     <div id="admin-holds" class="list"></div>
+    <h3>Управление пользователями</h3>
+    <div class="row">
+      <input id="admUid" inputmode="numeric" placeholder="user_id" />
+      <button id="admBlock">Заблокировать</button>
+      <button id="admUnblock">Разблокировать</button>
+    </div>
+    <div id="admBlockedList" class="list muted" style="margin:6px 0"></div>
+
+    <h3>Выплаты из панели</h3>
+    <div class="row">
+      <input id="admPayUid" inputmode="numeric" placeholder="user_id" />
+      <input id="admPayAmount" type="number" step="0.01" min="1" placeholder="Сумма $" />
+    </div>
+    <div class="row">
+      <input id="admPayUrl" placeholder="Ссылка на чек (Crypto Bot)" style="flex:1" />
+      <button id="admPaySend">Выплатить</button>
+    </div>
+    <h4>Последние выплаты</h4>
+    <div id="admPayouts" class="list"></div>
   </div>
 
   <div id="notify-root" class="notify-root" aria-live="polite"></div>
@@ -176,11 +199,20 @@
     </div>
   </div>
 
+  <div class="card-subsection" style="margin-top:12px">
+    <h3>Мои выводы</h3>
+    <div id="wdHistory" class="list"></div>
+    <div class="row" style="margin-top:6px">
+      <button id="wdHistRefresh">Обновить историю</button>
+    </div>
+  </div>
+
 </div>
 
-<script src="./script.js?v=R50"></script>
+<script src="./script.js?v=R51"></script>
 </body>
 </html>
+
 
 
 
