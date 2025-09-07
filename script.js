@@ -16,7 +16,7 @@ const qp = new URLSearchParams(location.search);
 const API_BASE = (
   qp.get("api") ||
   window.API_BASE ||
-  "https://performance-born-prospects-throwing.trycloudflare.com"
+  "https://commitment-recommended-endif-awful.trycloudflare.com"
 ).replace(/\/$/, "");
 
 // Global state
@@ -134,7 +134,7 @@ function bindMenu(){
     if (scr === "report")   { goto("report");   refreshReport(); return; }
     if (scr === "priv")     { goto("priv");     refreshPriv(); return; }
     if (scr === "roulette") { goto("roulette"); setupRouletteOnce(); return; }
-    if (scr === "withdraw") { goto("withdraw"); refreshWithdrawBalance(); return; }
+    if (scr === "withdraw") { goto("withdraw"); refreshWithdrawBalance(); refreshWithdrawHistory(); return; }
     if (scr === "contests") { goto("contests"); refreshContests(); return; }
     if (scr === "admin")    { goto("admin");    refreshAdmin(); return; }
   });
@@ -227,6 +227,24 @@ function roleLabel(r){
   if (r === "admin") return "Админ";
   return "Система";
 }
+
+async function refreshPayoutTape(){
+  try{
+    const r = await post("/api/payouts_recent", { limit: 20 });
+    const rows = r?.rows || [];
+    const box = $("#payoutTape");
+    if (!rows.length){ html(box, "<div class='muted'>Пока пусто</div>"); return; }
+    const out = rows.map(x=>{
+      const u = maskUsername(x.username || ("id"+x.user_id));
+      const nm = maskName(x.name || "");
+      const amt = Number(x.amount||0).toFixed(2);
+      const when = dt(x.paid_at || x.created_at);
+      return `<div class="row"><div>${u} • ${nm}</div><div>$${amt} • ${escapeHtml(when)}</div></div>`;
+    }).join("");
+    html(box, out);
+  }catch{ toast("Лента выводов недоступна"); }
+}
+$("#payoutTapeRefresh")?.addEventListener("click", refreshPayoutTape);
 
 /* ==================== СДАТЬ MAX ==================== */
 function lockPhone(phone){
@@ -456,9 +474,53 @@ async function confirmBuy(plan){
 
 /* ==================== АДМИН ==================== */
 function bindAdmin(){
-  $("#menu-admin")?.addEventListener("click", ()=>{ goto("admin"); refreshAdmin(); });
-  $("#admin-refresh")?.addEventListener("click", refreshAdmin);
+  $("#menu-admin")?.addEventListener("click", ()=>{ goto("admin"); refreshAdmin(); refreshAdminPayouts(); refreshBlocked(); });
+  $("#admin-refresh")?.addEventListener("click", ()=>{ refreshAdmin(); refreshAdminPayouts(); refreshBlocked(); });
+  $("#admBlock")?.addEventListener("click", ()=> adminBlockUnblock(true));
+  $("#admUnblock")?.addEventListener("click", ()=> adminBlockUnblock(false));
+  $("#admPaySend")?.addEventListener("click", adminPayNow);
 }
+
+async function adminBlockUnblock(block){
+  const uid = Number($("#admUid")?.value||0); if(!uid) return toast("user_id?");
+  try{
+    const r = await post(block?"/api/admin/block":"/api/admin/unblock", { target_id: uid });
+    if (r?.ok) { toast(block?"Заблокирован":"Разблокирован"); refreshBlocked(); }
+    else toast("Ошибка");
+  }catch{ toast("Ошибка"); }
+}
+async function refreshBlocked(){
+  try{
+    const r = await post("/api/admin/blocked_list", {});
+    const list = r?.rows||[];
+    html($("#admBlockedList"), list.length? list.map(x=>`<div>id${x.user_id} • до ${escapeHtml(dt(x.until))}</div>`).join("") : "<div class='muted'>Нет блокировок</div>");
+  }catch{ html($("#admBlockedList"), "<div class='muted'>н/д</div>"); }
+}
+async function adminPayNow(){
+  const uid = Number($("#admPayUid")?.value||0);
+  const amount = Number($("#admPayAmount")?.value||0);
+  const url = ($("#admPayUrl")?.value||"").trim();
+  if(!uid || !amount || !url) return toast("Данные?");
+  try{
+    const r = await post("/api/admin/payout/pay", { user_id: uid, amount, url });
+    if (r?.ok){ toast("Выплачено"); refreshAdminPayouts(); }
+    else toast("Ошибка выплаты");
+  }catch{ toast("Ошибка выплаты"); }
+}
+async function refreshAdminPayouts(){
+  try{
+    const r = await post("/api/admin/payouts", { limit: 30 });
+    const rows = r?.items || r?.rows || [];
+    html($("#admPayouts"), rows.length? rows.map(x=>{
+      const u = "id"+x.user_id;
+      const amt = Number(x.amount||0).toFixed(2);
+      const st = String(x.status||"");
+      const when = dt(x.paid_at || x.created_at);
+      return `<div class="row"><div>${u}</div><div>$${amt}</div><div class="muted">${escapeHtml(st)}</div><div>${escapeHtml(when)}</div></div>`;
+    }).join("") : "<div class='muted'>Нет данных</div>");
+  }catch{ html($("#admPayouts"), "<div class='muted'>Ошибка</div>"); }
+}
+
 async function refreshAdmin(){
   if (!S.is_admin) return alertModal("Нет прав","Доступ только для админов");
   try {
@@ -645,6 +707,24 @@ $("#wdCancel")?.addEventListener("click", async () => {
   } catch { toast("Ошибка отмены"); }
 });
 
+async function refreshWithdrawHistory(){
+  try{
+    const r = await post("/api/withdraw_history", { limit: 30 });
+    const rows = r?.rows || [];
+    const box = $("#wdHistory");
+    if (!rows.length){ html(box, "<div class='muted'>Пока нет заявок</div>"); return; }
+    const out = rows.map(x=>{
+      const amt = Number(x.amount||0).toFixed(2);
+      const st  = String(x.status||"").toLowerCase();
+      const when= dt(x.paid_at || x.created_at);
+      const cls = st==="paid" ? "ok" : st==="canceled" ? "bad" : "warn";
+      return `<div class="row ${cls}"><b>$${amt}</b><span class="muted" style="margin-left:auto">${escapeHtml(st)}</span><span style="margin-left:12px">${escapeHtml(when)}</span></div>`;
+    }).join("");
+    html(box, out);
+  }catch{ toast("История выводов недоступна"); }
+}
+$("#wdHistRefresh")?.addEventListener("click", refreshWithdrawHistory);
+
 /* ==================== КОНКУРСЫ ==================== */
 let LB_TIMER = null;
 async function refreshContests(){
@@ -738,6 +818,23 @@ async function openLeaderboard(cid){
 }
 
 /* ==================== УТИЛИТЫ ==================== */
+function maskUsername(u){
+  if (!u) return "—";
+  const s = (u.startsWith("@") ? u.slice(1) : u).toLowerCase();
+  return "@"+s.slice(0,3)+"********";
+}
+function maskName(n){
+  if (!n) return "—";
+  const s = String(n).trim();
+  return s.slice(0,1)+"******";
+}
+function dt(ts){
+  // ts может быть ISO или epoch сек
+  const d = typeof ts==="number" ? new Date(ts*1000) : new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString();
+}
+
 function fmtMoney(n){
   const num = Number(n || 0);
   return num.toFixed(2).replace(/\.00$/, ".00").replace(/(\.\d)0$/, "$1");
@@ -798,6 +895,3 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
-
-
-
