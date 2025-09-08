@@ -16,7 +16,7 @@ const qp = new URLSearchParams(location.search);
 const API_BASE = (
   qp.get("api") ||
   window.API_BASE ||
-  "https://performance-born-prospects-throwing.trycloudflare.com"
+  "https://hopkins-entrepreneur-neural-derek.trycloudflare.com"
 ).replace(/\/$/, "");
 
 // Global state
@@ -895,4 +895,5 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
