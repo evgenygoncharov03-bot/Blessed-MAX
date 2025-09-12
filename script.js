@@ -43,8 +43,29 @@ const F = { debug: !!qp.get("debug") };
 /* ---- DOM helpers ---- */
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-function show(node){ node?.classList.remove("hidden"); node?.setAttribute("aria-hidden","false"); }
-function hide(node){ node?.classList.add("hidden");   node?.setAttribute("aria-hidden","true"); }
+
+const FOCUS_SEL = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
+function firstFocusable(root){ return root?.querySelector(FOCUS_SEL) || null; }
+
+function show(node){
+  if(!node) return;
+  node.classList.remove("hidden");
+  node.setAttribute("aria-hidden","false");
+  node.removeAttribute("inert");
+  // безопасный перевод фокуса в видимую область
+  const to = firstFocusable(node) || node;
+  if (!to.hasAttribute("tabindex")) node.setAttribute("tabindex","-1");
+  to.focus?.();
+}
+
+function hide(node){
+  if(!node) return;
+  const hadFocusInside = node.contains(document.activeElement);
+  node.classList.add("hidden");
+  node.setAttribute("aria-hidden","true");
+  node.setAttribute("inert",""); // блокирует фокус и интеракции
+  if (hadFocusInside) document.activeElement?.blur?.();
+}
 function setText(node, text){ if(node) node.textContent = String(text ?? ""); }
 function html(node, markup){ if(node) node.innerHTML = markup; }
 
@@ -895,6 +916,7 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
 
 
