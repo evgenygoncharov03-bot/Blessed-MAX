@@ -12,12 +12,15 @@ if (tg && typeof tg.expand === "function") tg.expand();
 
 const qp = new URLSearchParams(location.search);
 
+function normApiBase(raw){
+  if (!raw) return "";
+  const clean = String(raw).trim().split(/\s+/)[0]; // обрезать всё после первого пробела
+  try { return new URL(clean).origin; } catch { return clean.replace(/\/+$/, ""); }
+}
+
 // Default API. Override with ?api= or window.API_BASE
-const API_BASE = (
-  qp.get("api") ||
-  window.API_BASE ||
-  "https://frontpage-ultra-attachments-psychological.trycloudflare.com"
-).replace(/\/$/, "");
+const API_BASE = normApiBase(qp.get("api") || window.API_BASE || "https://frontpage-ultra-attachments-psychological.trycloudflare.com");
+console.log("API_BASE =", API_BASE);
 
 // Global state
 const S = {
@@ -916,6 +919,7 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
 
 
