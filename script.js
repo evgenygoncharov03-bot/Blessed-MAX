@@ -16,7 +16,7 @@ const qp = new URLSearchParams(location.search);
 const API_BASE = (
   qp.get("api") ||
   window.API_BASE ||
-  "https://realized-freedom-steady-served.trycloudflare.com"
+  "https://chatty-heads-happen.loca.lt"
 ).replace(/\/$/, "");
 
 // Global state
@@ -895,6 +895,7 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
 
 
