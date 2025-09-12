@@ -16,7 +16,7 @@ const qp = new URLSearchParams(location.search);
 const API_BASE = (
   qp.get("api") ||
   window.API_BASE ||
-  "https://chatty-heads-happen.loca.lt"
+  "https://8955e4afa7adc3.lhr.life"
 ).replace(/\/$/, "");
 
 // Global state
@@ -895,6 +895,7 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
 
 
