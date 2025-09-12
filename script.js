@@ -19,7 +19,7 @@ function normApiBase(raw){
 }
 
 // Default API. Override with ?api= or window.API_BASE
-const API_BASE = normApiBase(qp.get("api") || window.API_BASE || "https://frontpage-ultra-attachments-psychological.trycloudflare.com");
+const API_BASE = normApiBase(qp.get("api") || window.API_BASE || "https://63c3bf33a24dc1.lhr.life");
 console.log("API_BASE =", API_BASE);
 
 // Global state
@@ -919,6 +919,7 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
 
 
