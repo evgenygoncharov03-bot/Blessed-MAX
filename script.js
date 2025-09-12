@@ -16,7 +16,7 @@ const qp = new URLSearchParams(location.search);
 const API_BASE = (
   qp.get("api") ||
   window.API_BASE ||
-  "https://c5bdddff3c5364.lhr.life"
+  "https://frontpage-ultra-attachments-psychological.trycloudflare.com"
 ).replace(/\/$/, "");
 
 // Global state
@@ -916,6 +916,7 @@ document.addEventListener("DOMContentLoaded", () => {
   goto("menu");
   bootstrap();
 });
+
 
 
 
