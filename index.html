@@ -16,8 +16,6 @@
       overflow-x: hidden;
       position: relative;
     }
-
-    /* Фон с символами $ (анимированные) */
     body::before {
       content: "";
       position: absolute;
@@ -27,17 +25,14 @@
       animation: moveBg 30s linear infinite;
       z-index: -1;
     }
-
     @keyframes moveBg {
       0% { background-position: 0 0; }
       100% { background-position: 200px 200px; }
     }
-
     .marquee {
       width: 100%;
       overflow: hidden;
       white-space: nowrap;
-      box-sizing: border-box;
       background: rgba(27, 38, 59, 0.9);
       padding: 12px 0;
       font-weight: bold;
@@ -45,35 +40,21 @@
       position: sticky;
       top: 0;
     }
-
     .marquee span {
       display: inline-block;
       padding-left: 100%;
       animation: scroll 12s linear infinite;
     }
-
     @keyframes scroll {
       0% { transform: translateX(0); }
       100% { transform: translateX(-100%); }
     }
-
     .container {
       padding: 20px;
       margin-top: 20px;
     }
-
-    .balance {
-      font-size: 22px;
-      margin-top: 20px;
-      font-weight: bold;
-    }
-
-    .bet {
-      font-size: 13px;
-      color: #bbb;
-      margin-bottom: 20px;
-    }
-
+    .balance { font-size: 22px; margin-top: 20px; font-weight: bold; }
+    .bet { font-size: 13px; color: #bbb; margin-bottom: 20px; }
     .btn {
       display: block;
       margin: 15px auto;
@@ -91,22 +72,49 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       backdrop-filter: blur(6px);
     }
-
     .btn:hover {
       background: rgba(44, 82, 130, 0.9);
       transform: translateY(-4px) scale(1.03);
       box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 12px rgba(0, 180, 255, 0.6);
     }
-
-    h1 {
-      font-size: 22px;
-      margin-bottom: 8px;
+    h1 { font-size: 22px; margin-bottom: 8px; }
+    p { font-size: 15px; color: #ddd; margin-top: 0; }
+    /* Модалки */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
     }
-
-    p {
-      font-size: 15px;
-      color: #ddd;
-      margin-top: 0;
+    .modal-content {
+      background: #1b263b;
+      padding: 20px;
+      border-radius: 16px;
+      max-width: 400px;
+      width: 90%;
+      text-align: left;
+    }
+    .modal h2 { margin-top: 0; }
+    .modal input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    .close-btn {
+      background: #c0392b;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      float: right;
     }
   </style>
 </head>
@@ -119,28 +127,94 @@
   <div class="container">
     <h1>Добро пожаловать в Blessed MAX</h1>
     <p>Зарабатывай, сдавая свои аккаунты MAX в аренду.</p>
-
-    <div class="balance">💵 Баланс: <b>0$</b></div>
+    <div class="balance" id="balance">💵 Баланс: <b>0$</b></div>
     <div class="bet">Ваша ставка: 1$</div>
+    <button class="btn" onclick="openModal('statsModal')">📊 Моя статистика</button>
+    <button class="btn" onclick="openModal('submitModal')">📱 Сдать номер</button>
+    <button class="btn" onclick="openModal('numbersModal')">🔢 Мои номера</button>
+  </div>
 
-    <button class="btn">📊 Моя статистика</button>
-    <button class="btn">📱 Сдать номер</button>
-    <button class="btn">🔢 Мои номера</button>
+  <!-- Модальное окно статистики -->
+  <div class="modal" id="statsModal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal('statsModal')">✖</button>
+      <h2>📊 Моя статистика</h2>
+      <p id="stats">Загрузка...</p>
+    </div>
+  </div>
+
+  <!-- Модальное окно сдачи номера -->
+  <div class="modal" id="submitModal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal('submitModal')">✖</button>
+      <h2>📱 Сдать номер</h2>
+      <input type="text" id="phoneInput" placeholder="+7XXXXXXXXXX">
+      <button class="btn" onclick="submitNumber()">Отправить</button>
+      <p id="submitStatus"></p>
+    </div>
+  </div>
+
+  <!-- Модальное окно моих номеров -->
+  <div class="modal" id="numbersModal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal('numbersModal')">✖</button>
+      <h2>🔢 Мои номера</h2>
+      <div id="myNumbers">Загрузка...</div>
+    </div>
   </div>
 
   <script>
     async function loadMarquee() {
       try {
-        let res = await fetch("http://localhost:5000/marquee"); // заменишь на свой сервер
+        let res = await fetch("http://localhost:5000/marquee");
         let text = await res.text();
         document.getElementById("marquee-text").innerText = text;
-      } catch (e) {
-        console.error("Ошибка загрузки бегущей строки:", e);
-      }
+      } catch (e) { console.error("Ошибка загрузки бегущей строки:", e); }
+    }
+    setInterval(loadMarquee, 10000); loadMarquee();
+
+    function openModal(id) {
+      document.getElementById(id).style.display = "flex";
+      if (id === "statsModal") loadStats();
+      if (id === "numbersModal") loadNumbers();
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = "none";
     }
 
-    setInterval(loadMarquee, 10000); 
-    loadMarquee();
+    async function loadStats() {
+      let tg = window.Telegram.WebApp;
+      let res = await fetch("http://localhost:5000/stats?user_id=" + tg.initDataUnsafe.user.id);
+      let data = await res.json();
+      document.getElementById("stats").innerHTML =
+        `💵 Баланс: ${data.balance}$<br>` +
+        `📱 Сдано номеров: ${data.total_numbers}<br>` +
+        `⏳ Минут отработано: ${data.total_minutes}`;
+    }
+
+    async function submitNumber() {
+      let phone = document.getElementById("phoneInput").value.trim();
+      if (!phone.startsWith("+7") || phone.length < 12) {
+        document.getElementById("submitStatus").innerText = "⚠ Введите номер в формате +7XXXXXXXXXX";
+        return;
+      }
+      let tg = window.Telegram.WebApp;
+      let res = await fetch("http://localhost:5000/submit_number", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({user_id: tg.initDataUnsafe.user.id, phone})
+      });
+      let data = await res.json();
+      document.getElementById("submitStatus").innerText = data.message;
+    }
+
+    async function loadNumbers() {
+      let tg = window.Telegram.WebApp;
+      let res = await fetch("http://localhost:5000/my_numbers?user_id=" + tg.initDataUnsafe.user.id);
+      let data = await res.json();
+      document.getElementById("myNumbers").innerHTML =
+        data.numbers.length ? data.numbers.join("<br>") : "Нет активных номеров";
+    }
   </script>
 
 </body>
