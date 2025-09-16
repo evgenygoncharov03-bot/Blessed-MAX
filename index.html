@@ -2,128 +2,77 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Democrat WA Rent</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blessed MAX</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #141e30, #243b55);
+      background: #0d1b2a; /* тёмно-синий фон */
       color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
       text-align: center;
     }
-    h1 {
-      font-size: 24px;
-      margin-bottom: 30px;
-    }
-    .btn, .submit-btn {
-      display: block;
-      width: 240px;
-      padding: 15px;
-      margin: 10px 0;
-      font-size: 18px;
+    .marquee {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      box-sizing: border-box;
+      background: #1b263b;
+      padding: 10px 0;
       font-weight: bold;
-      text-decoration: none;
-      text-align: center;
-      cursor: pointer;
-      color: #fff;
-      background: #1d976c;
-      border-radius: 12px;
-      border: none;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      transition: all 0.2s;
-    }
-    .btn:hover, .submit-btn:hover {
-      background: #93f9b9;
-      color: #000;
-      transform: scale(1.05);
-    }
-    .hidden {
-      display: none;
-    }
-    .input-box {
-      margin: 10px 0;
-    }
-    input {
-      padding: 12px;
-      width: 220px;
       font-size: 16px;
-      border-radius: 8px;
+      animation: scroll 12s linear infinite;
+    }
+    @keyframes scroll {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .container {
+      padding: 20px;
+    }
+    .balance {
+      font-size: 22px;
+      margin-top: 20px;
+    }
+    .bet {
+      font-size: 12px;
+      color: #aaa;
+    }
+    .btn {
+      display: block;
+      margin: 15px auto;
+      padding: 12px 20px;
+      border-radius: 10px;
       border: none;
-      outline: none;
+      font-size: 16px;
+      cursor: pointer;
+      background: #1e3a5f;
+      color: white;
+      width: 80%;
+      max-width: 300px;
+      transition: 0.3s;
+    }
+    .btn:hover {
+      background: #2c5282;
     }
   </style>
 </head>
 <body>
-  <h1>📊 Добро пожаловать!</h1>
 
-  <!-- Главное меню -->
-  <div id="menu">
-    <button class="btn" onclick="sendStat()">📈 Моя Статистика</button>
-    <button class="btn" onclick="openForm()">📨 Сдать номер</button>
-    <button class="btn" onclick="sendMyNumbers()">📋 Мои номера</button>
+  <div class="marquee">🔥 Новости от Blessed MAX — арендуй и зарабатывай прямо сейчас! 🔥</div>
+
+  <div class="container">
+    <h1>Добро пожаловать в Blessed MAX</h1>
+    <p>Зарабатывай, сдавая свои аккаунты MAX в аренду.</p>
+
+    <div class="balance">💵 Баланс: <b>0$</b></div>
+    <div class="bet">Ваша ставка: 1$</div>
+
+    <button class="btn">📊 Моя статистика</button>
+    <button class="btn">📱 Сдать номер</button>
+    <button class="btn">🔢 Мои номера</button>
   </div>
 
-  <!-- Форма сдачи номера -->
-  <div id="form" class="hidden">
-    <div class="input-box">
-      <input type="text" id="phone" placeholder="+7XXXXXXXXXX">
-    </div>
-    <button class="submit-btn" onclick="submitPhone()">Отправить номер</button>
-
-    <div id="codeBox" class="hidden">
-      <div class="input-box">
-        <input type="text" id="code" placeholder="Введите код">
-      </div>
-      <button class="submit-btn" onclick="submitCode()">Отправить код</button>
-    </div>
-  </div>
-
-  <script>
-    let tg = window.Telegram.WebApp;
-    tg.expand(); // на весь экран
-
-    function sendStat() {
-      tg.sendData(JSON.stringify({action: "stats"}));
-    }
-
-    function sendMyNumbers() {
-      tg.sendData(JSON.stringify({action: "my_numbers"}));
-    }
-
-    function openForm() {
-      document.getElementById("menu").classList.add("hidden");
-      document.getElementById("form").classList.remove("hidden");
-    }
-
-    function submitPhone() {
-      let phone = document.getElementById("phone").value.trim();
-      if (!phone.startsWith("+7") || phone.length < 11) {
-        alert("Введите номер в формате +7XXXXXXXXXX");
-        return;
-      }
-      tg.sendData(JSON.stringify({action: "send_number", number: phone}));
-
-      // открываем ввод кода
-      document.getElementById("codeBox").classList.remove("hidden");
-    }
-
-    function submitCode() {
-      let code = document.getElementById("code").value.trim();
-      if (code.length < 3) {
-        alert("Введите корректный код");
-        return;
-      }
-      tg.sendData(JSON.stringify({action: "send_code", code: code}));
-      alert("✅ Код отправлен!");
-      tg.close(); // закрыть WebApp
-    }
-  </script>
 </body>
 </html>
