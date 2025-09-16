@@ -2,59 +2,97 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Blessed MAX</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: #0d1b2a; /* тёмно-синий фон */
+      background: linear-gradient(135deg, #0d1b2a, #1b263b);
       color: #fff;
       text-align: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
     }
+
+    /* Фон с символами $ */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: 
+        radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><text x='10' y='50' font-size='40' fill='rgba(255,255,255,0.05)'>$</text></svg>");
+      background-size: 80px 80px;
+      z-index: -1;
+    }
+
     .marquee {
       width: 100%;
       overflow: hidden;
       white-space: nowrap;
       box-sizing: border-box;
-      background: #1b263b;
-      padding: 10px 0;
+      background: rgba(27, 38, 59, 0.9);
+      padding: 12px 0;
       font-weight: bold;
       font-size: 16px;
+      position: sticky;
+      top: 0;
       animation: scroll 12s linear infinite;
     }
     @keyframes scroll {
       0% { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
+
     .container {
       padding: 20px;
+      margin-top: 20px;
     }
+
     .balance {
       font-size: 22px;
       margin-top: 20px;
+      font-weight: bold;
     }
     .bet {
-      font-size: 12px;
-      color: #aaa;
+      font-size: 13px;
+      color: #bbb;
+      margin-bottom: 20px;
     }
+
     .btn {
       display: block;
       margin: 15px auto;
-      padding: 12px 20px;
-      border-radius: 10px;
+      padding: 14px 20px;
+      border-radius: 14px;
       border: none;
-      font-size: 16px;
+      font-size: 17px;
+      font-weight: 600;
       cursor: pointer;
-      background: #1e3a5f;
+      background: linear-gradient(145deg, #1e3a5f, #243b6b);
       color: white;
-      width: 80%;
-      max-width: 300px;
-      transition: 0.3s;
+      width: 85%;
+      max-width: 340px;
+      transition: transform 0.2s ease, background 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     }
     .btn:hover {
-      background: #2c5282;
+      background: linear-gradient(145deg, #2c5282, #304b84);
+      transform: translateY(-3px);
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 15px;
+      color: #ddd;
+      margin-top: 0;
     }
   </style>
 </head>
