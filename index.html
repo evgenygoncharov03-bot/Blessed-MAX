@@ -9,7 +9,7 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #0d1b2a, #1b263b);
+      background: radial-gradient(circle at top, #1b263b, #0d1b2a 70%);
       color: #fff;
       text-align: center;
       min-height: 100vh;
@@ -17,16 +17,20 @@
       position: relative;
     }
 
-    /* Фон с символами $ */
+    /* Фон с символами $ (анимированные) */
     body::before {
       content: "";
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-image: 
-        radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><text x='10' y='50' font-size='40' fill='rgba(255,255,255,0.05)'>$</text></svg>");
-      background-size: 80px 80px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><text x='20' y='60' font-size='50' fill='rgba(255,255,255,0.05)'>$</text></svg>");
+      background-size: 120px 120px;
+      animation: moveBg 30s linear infinite;
       z-index: -1;
+    }
+
+    @keyframes moveBg {
+      0% { background-position: 0 0; }
+      100% { background-position: 200px 200px; }
     }
 
     .marquee {
@@ -63,6 +67,7 @@
       margin-top: 20px;
       font-weight: bold;
     }
+
     .bet {
       font-size: 13px;
       color: #bbb;
@@ -78,16 +83,19 @@
       font-size: 17px;
       font-weight: 600;
       cursor: pointer;
-      background: linear-gradient(145deg, #1e3a5f, #243b6b);
+      background: rgba(30, 58, 95, 0.8);
       color: white;
       width: 85%;
       max-width: 340px;
-      transition: transform 0.2s ease, background 0.3s ease;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      backdrop-filter: blur(6px);
     }
+
     .btn:hover {
-      background: linear-gradient(145deg, #2c5282, #304b84);
-      transform: translateY(-3px);
+      background: rgba(44, 82, 130, 0.9);
+      transform: translateY(-4px) scale(1.03);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 12px rgba(0, 180, 255, 0.6);
     }
 
     h1 {
@@ -123,7 +131,7 @@
   <script>
     async function loadMarquee() {
       try {
-        let res = await fetch("http://localhost:5000/marquee"); // ⚠️ заменишь на свой сервер
+        let res = await fetch("http://localhost:5000/marquee"); // заменишь на свой сервер
         let text = await res.text();
         document.getElementById("marquee-text").innerText = text;
       } catch (e) {
@@ -131,7 +139,7 @@
       }
     }
 
-    setInterval(loadMarquee, 10000); // обновлять каждые 10 секунд
+    setInterval(loadMarquee, 10000); 
     loadMarquee();
   </script>
 
