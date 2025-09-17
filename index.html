@@ -1,185 +1,104 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Blessed MAX</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blessed MAX — Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body{margin:0;font-family:'Segoe UI',sans-serif;background:radial-gradient(circle at top,#1b263b,#0d1b2a 70%);color:#fff;text-align:center;min-height:100vh;overflow-x:hidden;position:relative}
-    body::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><text x='20' y='60' font-size='50' fill='rgba(255,255,255,0.05)'>$</text></svg>");background-size:120px 120px;animation:moveBg 30s linear infinite;z-index:-1}
-    @keyframes moveBg{0%{background-position:0 0}100%{background-position:200px 200px}}
-    .marquee{width:100%;overflow:hidden;white-space:nowrap;background:rgba(27,38,59,.9);padding:12px 0;font-weight:700;font-size:16px;position:sticky;top:0}
-    .marquee span{display:inline-block;padding-left:100%;animation:scroll 12s linear infinite}
-    @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
-    .container{padding:20px;margin-top:20px}
-    .balance{font-size:22px;margin-top:20px;font-weight:700}
-    .bet{font-size:13px;color:#bbb;margin-bottom:20px}
-    .btn{display:block;margin:15px auto;padding:14px 20px;border-radius:14px;border:none;font-size:17px;font-weight:600;cursor:pointer;background:rgba(30,58,95,.8);color:#fff;width:85%;max-width:340px;transition:all .3s ease;box-shadow:0 4px 12px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
-    .btn:hover{background:rgba(44,82,130,.9);transform:translateY(-4px) scale(1.03);box-shadow:0 6px 16px rgba(0,0,0,.5),0 0 12px rgba(0,180,255,.6)}
-    h1{font-size:22px;margin-bottom:8px} p{font-size:15px;color:#ddd;margin-top:0}
-    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.7);justify-content:center;align-items:center}
-    .modal-content{background:#1b263b;padding:20px;border-radius:16px;max-width:400px;width:90%;text-align:left}
-    .modal h2{margin-top:0}
-    .modal input{width:100%;padding:12px;border-radius:10px;border:none;margin:10px 0;font-size:16px}
-    .close-btn{background:#c0392b;color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;float:right}
-    .hint{opacity:.85;font-size:12px;margin-top:8px}
+    :root {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    body {
+      margin: 0; padding: 16px;
+      background: var(--tg-theme-secondary-bg-color, #111);
+      color: var(--tg-theme-text-color, #fff);
+    }
+    .card {
+      background: var(--tg-theme-bg-color, #1b1b1b);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25);
+    }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    p { margin: 0 0 12px; opacity: .9; }
+    input, textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--tg-theme-secondary-bg-color, #111);
+      color: var(--tg-theme-text-color, #fff);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .row { display: grid; gap: 12px; margin: 12px 0; }
+    button {
+      width: 100%;
+      padding: 12px 16px;
+      font-weight: 600;
+      border: 0; border-radius: 12px;
+      cursor: pointer;
+      background: var(--tg-theme-button-color, #2ea6ff);
+      color: var(--tg-theme-button-text-color, #fff);
+    }
+    .hint { font-size: 12px; opacity: .7; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <div class="marquee"><span id="marquee-text">🔥 Новости от Blessed MAX — сдавай в аренду и зарабатывай прямо сейчас! 🔥</span></div>
+  <div class="card">
+    <h1>Blessed MAX</h1>
+    <p id="hello">Загрузка…</p>
 
-  <div class="container">
-    <h1>Добро пожаловать в Blessed MAX</h1>
-    <p>Зарабатывай, сдавая свои аккаунты MAX в аренду.</p>
-    <div class="balance" id="balance">💵 Баланс: <b>0$</b></div>
-    <div class="bet">Ваша ставка: 1$</div>
-    <button class="btn" onclick="openModal('statsModal')">📊 Моя статистика</button>
-    <button class="btn" onclick="openModal('submitModal')">📱 Сдать номер</button>
-    <button class="btn" onclick="openModal('numbersModal')">🔢 Мои номера</button>
-    <div class="hint">Если открыто вне Telegram, часть функций недоступна — открой через Mini App.</div>
-  </div>
-
-  <!-- Статистика -->
-  <div class="modal" id="statsModal">
-    <div class="modal-content">
-      <button class="close-btn" onclick="closeModal('statsModal')">✖</button>
-      <h2>📊 Моя статистика</h2>
-      <p id="stats">Загрузка...</p>
+    <div class="row">
+      <input id="title" placeholder="Заголовок" />
+      <textarea id="note" rows="5" placeholder="Сообщение для бота"></textarea>
     </div>
-  </div>
 
-  <!-- Сдать номер -->
-  <div class="modal" id="submitModal">
-    <div class="modal-content">
-      <button class="close-btn" onclick="closeModal('submitModal')">✖</button>
-      <h2>📱 Сдать номер</h2>
-      <input type="text" id="phoneInput" placeholder="+7XXXXXXXXXX" inputmode="numeric" />
-      <button class="btn" onclick="submitNumber()">Отправить</button>
-      <p id="submitStatus"></p>
-    </div>
-  </div>
-
-  <!-- Мои номера -->
-  <div class="modal" id="numbersModal">
-    <div class="modal-content">
-      <button class="close-btn" onclick="closeModal('numbersModal')">✖</button>
-      <h2>🔢 Мои номера</h2>
-      <div id="myNumbers">Загрузка...</div>
-    </div>
+    <button id="send">Отправить в бота</button>
+    <div class="hint">Данные отправятся как <code>web_app_data</code> и бот ответит в чате.</div>
   </div>
 
   <script>
-    // === НАСТРОЙКА БЭКЕНДА ===
-    // Укажи публичный HTTPS URL твоего Flask-сервера:
-    const BASE_URL = "https://api.render.com/deploy/srv-d3568me3jp1c73eptg10?key=sYM3v4uOWEA"; // ← замени на свой
+    const tg = window.Telegram?.WebApp;
 
-    // === Telegram Mini App API ===
-    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-    if (tg) {
-      try { tg.ready(); tg.expand(); } catch (e) {}
-      const theme = tg.colorScheme;
-      if (theme === "light") document.body.style.background = "radial-gradient(circle at top,#324c7a,#0d1b2a 70%)";
+    // Безопасно инициализируем
+    tg?.ready();
+    // Разворачиваем на максимум
+    tg?.expand();
+
+    // Применяем цвета темы Телеграма (автоматически, но можно дополнительно)
+    if (tg?.themeParams) {
+      document.body.style.background = tg.themeParams.secondary_bg_color || '';
+      document.body.style.color = tg.themeParams.text_color || '';
     }
 
-    function getUserId() {
-      if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-        return tg.initDataUnsafe.user.id;
-      }
-      // Фолбэк для тестов вне Telegram
-      const stored = localStorage.getItem("dev_user_id");
-      if (stored) return stored;
-      const rnd = Math.floor(100000 + Math.random() * 900000);
-      localStorage.setItem("dev_user_id", rnd);
-      return rnd;
-    }
+    // Поприветствуем пользователя
+    const helloEl = document.getElementById('hello');
+    const user = tg?.initDataUnsafe?.user;
+    helloEl.textContent = user
+      ? `Привет, ${user.first_name}${user.last_name ? ' ' + user.last_name : ''}!`
+      : 'Привет!';
 
-    // Универсальный fetch с защитой и логами
-    async function api(path, opts = {}) {
-      const url = BASE_URL + path;
-      const defaults = { headers: { "Content-Type": "application/json" } };
-      const config = Object.assign({}, defaults, opts);
+    // Кнопка отправки данных в бота
+    document.getElementById('send').addEventListener('click', () => {
+      const title = document.getElementById('title').value.trim();
+      const note = document.getElementById('note').value.trim();
+
+      const payload = {
+        type: 'blessed_max_form',
+        title: title || null,
+        note: note || null,
+        ts: Date.now()
+      };
 
       try {
-        const res = await fetch(url, config);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const ct = res.headers.get("content-type") || "";
-        return ct.includes("application/json") ? res.json() : res.text();
+        tg.sendData(JSON.stringify(payload)); // улетит в update.message.web_app_data.data
+        tg.close(); // по желанию — закрыть Mini App
       } catch (e) {
-        console.error("API error:", e);
-        throw e;
+        alert('Не удалось отправить данные: ' + e.message);
       }
-    }
-
-    // === UI логика ===
-    function openModal(id) {
-      document.getElementById(id).style.display = "flex";
-      if (id === "statsModal") loadStats();
-      if (id === "numbersModal") loadNumbers();
-    }
-    function closeModal(id) {
-      document.getElementById(id).style.display = "none";
-    }
-
-    // Бегущая строка
-    async function loadMarquee() {
-      try {
-        const text = await api("/marquee");
-        document.getElementById("marquee-text").innerText = typeof text === "string" ? text : (text.text || "—");
-      } catch (_) {}
-    }
-    setInterval(loadMarquee, 10000);
-    loadMarquee();
-
-    // Статистика
-    async function loadStats() {
-      const userId = getUserId();
-      try {
-        const data = await api(`/stats?user_id=${encodeURIComponent(userId)}`);
-        document.getElementById("stats").innerHTML =
-          `💵 Баланс: ${data.balance}$<br>` +
-          `📱 Сдано номеров: ${data.total_numbers}<br>` +
-          `⏳ Минут отработано: ${data.total_minutes}`;
-        document.getElementById("balance").innerHTML = `💵 Баланс: <b>${data.balance}$</b>`;
-      } catch (e) {
-        document.getElementById("stats").innerText = "Не удалось загрузить статистику.";
-      }
-    }
-
-    // Сдача номера
-    async function submitNumber() {
-      const phoneEl = document.getElementById("phoneInput");
-      const phone = phoneEl.value.replace(/\s+/g, "");
-
-      if (!/^\+7\d{10}$/.test(phone)) {
-        document.getElementById("submitStatus").innerText = "⚠ Введите номер в формате +7XXXXXXXXXX";
-        return;
-      }
-
-      const userId = getUserId();
-      try {
-        const data = await api("/submit_number", {
-          method: "POST",
-          body: JSON.stringify({ user_id: userId, phone })
-        });
-        document.getElementById("submitStatus").innerText = data.message || "Отправлено.";
-        phoneEl.value = "";
-      } catch (e) {
-        document.getElementById("submitStatus").innerText = "Ошибка отправки. Попробуйте позже.";
-      }
-    }
-
-    // Мои номера
-    async function loadNumbers() {
-      const userId = getUserId();
-      try {
-        const data = await api(`/my_numbers?user_id=${encodeURIComponent(userId)}`);
-        const list = (data.numbers || []);
-        document.getElementById("myNumbers").innerHTML = list.length ? list.join("<br>") : "Нет активных номеров";
-      } catch (e) {
-        document.getElementById("myNumbers").innerText = "Не удалось загрузить номера.";
-      }
-    }
+    });
   </script>
 </body>
 </html>
