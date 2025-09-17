@@ -1,128 +1,33 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Blessed MAX</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at top, #1b263b, #0d1b2a 70%);
-      color: #fff;
-      text-align: center;
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-    }
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><text x='20' y='60' font-size='50' fill='rgba(255,255,255,0.05)'>$</text></svg>");
-      background-size: 120px 120px;
-      animation: moveBg 30s linear infinite;
-      z-index: -1;
-    }
-    @keyframes moveBg {
-      0% { background-position: 0 0; }
-      100% { background-position: 200px 200px; }
-    }
-    .marquee {
-      width: 100%;
-      overflow: hidden;
-      white-space: nowrap;
-      background: rgba(27, 38, 59, 0.9);
-      padding: 12px 0;
-      font-weight: bold;
-      font-size: 16px;
-      position: sticky;
-      top: 0;
-    }
-    .marquee span {
-      display: inline-block;
-      padding-left: 100%;
-      animation: scroll 12s linear infinite;
-    }
-    @keyframes scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-    .container {
-      padding: 20px;
-      margin-top: 20px;
-    }
-    .balance { font-size: 22px; margin-top: 20px; font-weight: bold; }
-    .bet { font-size: 13px; color: #bbb; margin-bottom: 20px; }
-    .btn {
-      display: block;
-      margin: 15px auto;
-      padding: 14px 20px;
-      border-radius: 14px;
-      border: none;
-      font-size: 17px;
-      font-weight: 600;
-      cursor: pointer;
-      background: rgba(30, 58, 95, 0.8);
-      color: white;
-      width: 85%;
-      max-width: 340px;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      backdrop-filter: blur(6px);
-    }
-    .btn:hover {
-      background: rgba(44, 82, 130, 0.9);
-      transform: translateY(-4px) scale(1.03);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 12px rgba(0, 180, 255, 0.6);
-    }
-    h1 { font-size: 22px; margin-bottom: 8px; }
-    p { font-size: 15px; color: #ddd; margin-top: 0; }
-    /* Модалки */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: #1b263b;
-      padding: 20px;
-      border-radius: 16px;
-      max-width: 400px;
-      width: 90%;
-      text-align: left;
-    }
-    .modal h2 { margin-top: 0; }
-    .modal input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      margin: 10px 0;
-      font-size: 16px;
-    }
-    .close-btn {
-      background: #c0392b;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      float: right;
-    }
+    body{margin:0;font-family:'Segoe UI',sans-serif;background:radial-gradient(circle at top,#1b263b,#0d1b2a 70%);color:#fff;text-align:center;min-height:100vh;overflow-x:hidden;position:relative}
+    body::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><text x='20' y='60' font-size='50' fill='rgba(255,255,255,0.05)'>$</text></svg>");background-size:120px 120px;animation:moveBg 30s linear infinite;z-index:-1}
+    @keyframes moveBg{0%{background-position:0 0}100%{background-position:200px 200px}}
+    .marquee{width:100%;overflow:hidden;white-space:nowrap;background:rgba(27,38,59,.9);padding:12px 0;font-weight:700;font-size:16px;position:sticky;top:0}
+    .marquee span{display:inline-block;padding-left:100%;animation:scroll 12s linear infinite}
+    @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+    .container{padding:20px;margin-top:20px}
+    .balance{font-size:22px;margin-top:20px;font-weight:700}
+    .bet{font-size:13px;color:#bbb;margin-bottom:20px}
+    .btn{display:block;margin:15px auto;padding:14px 20px;border-radius:14px;border:none;font-size:17px;font-weight:600;cursor:pointer;background:rgba(30,58,95,.8);color:#fff;width:85%;max-width:340px;transition:all .3s ease;box-shadow:0 4px 12px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+    .btn:hover{background:rgba(44,82,130,.9);transform:translateY(-4px) scale(1.03);box-shadow:0 6px 16px rgba(0,0,0,.5),0 0 12px rgba(0,180,255,.6)}
+    h1{font-size:22px;margin-bottom:8px} p{font-size:15px;color:#ddd;margin-top:0}
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.7);justify-content:center;align-items:center}
+    .modal-content{background:#1b263b;padding:20px;border-radius:16px;max-width:400px;width:90%;text-align:left}
+    .modal h2{margin-top:0}
+    .modal input{width:100%;padding:12px;border-radius:10px;border:none;margin:10px 0;font-size:16px}
+    .close-btn{background:#c0392b;color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;float:right}
+    .hint{opacity:.85;font-size:12px;margin-top:8px}
   </style>
 </head>
 <body>
-
-  <div class="marquee">
-    <span id="marquee-text">🔥 Новости от Blessed MAX — сдавай в аренду и зарабатывай прямо сейчас! 🔥</span>
-  </div>
+  <div class="marquee"><span id="marquee-text">🔥 Новости от Blessed MAX — сдавай в аренду и зарабатывай прямо сейчас! 🔥</span></div>
 
   <div class="container">
     <h1>Добро пожаловать в Blessed MAX</h1>
@@ -132,9 +37,10 @@
     <button class="btn" onclick="openModal('statsModal')">📊 Моя статистика</button>
     <button class="btn" onclick="openModal('submitModal')">📱 Сдать номер</button>
     <button class="btn" onclick="openModal('numbersModal')">🔢 Мои номера</button>
+    <div class="hint">Если открыто вне Telegram, часть функций недоступна — открой через Mini App.</div>
   </div>
 
-  <!-- Модальное окно статистики -->
+  <!-- Статистика -->
   <div class="modal" id="statsModal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeModal('statsModal')">✖</button>
@@ -143,18 +49,18 @@
     </div>
   </div>
 
-  <!-- Модальное окно сдачи номера -->
+  <!-- Сдать номер -->
   <div class="modal" id="submitModal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeModal('submitModal')">✖</button>
       <h2>📱 Сдать номер</h2>
-      <input type="text" id="phoneInput" placeholder="+7XXXXXXXXXX">
+      <input type="text" id="phoneInput" placeholder="+7XXXXXXXXXX" inputmode="numeric" />
       <button class="btn" onclick="submitNumber()">Отправить</button>
       <p id="submitStatus"></p>
     </div>
   </div>
 
-  <!-- Модальное окно моих номеров -->
+  <!-- Мои номера -->
   <div class="modal" id="numbersModal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeModal('numbersModal')">✖</button>
@@ -164,15 +70,48 @@
   </div>
 
   <script>
-    async function loadMarquee() {
-      try {
-        let res = await fetch("http://localhost:5000/marquee");
-        let text = await res.text();
-        document.getElementById("marquee-text").innerText = text;
-      } catch (e) { console.error("Ошибка загрузки бегущей строки:", e); }
-    }
-    setInterval(loadMarquee, 10000); loadMarquee();
+    // === НАСТРОЙКА БЭКЕНДА ===
+    // Укажи публичный HTTPS URL твоего Flask-сервера:
+    const BASE_URL = "https://api.render.com/deploy/srv-d3568me3jp1c73eptg10?key=sYM3v4uOWEA"; // ← замени на свой
 
+    // === Telegram Mini App API ===
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if (tg) {
+      try { tg.ready(); tg.expand(); } catch (e) {}
+      const theme = tg.colorScheme;
+      if (theme === "light") document.body.style.background = "radial-gradient(circle at top,#324c7a,#0d1b2a 70%)";
+    }
+
+    function getUserId() {
+      if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+        return tg.initDataUnsafe.user.id;
+      }
+      // Фолбэк для тестов вне Telegram
+      const stored = localStorage.getItem("dev_user_id");
+      if (stored) return stored;
+      const rnd = Math.floor(100000 + Math.random() * 900000);
+      localStorage.setItem("dev_user_id", rnd);
+      return rnd;
+    }
+
+    // Универсальный fetch с защитой и логами
+    async function api(path, opts = {}) {
+      const url = BASE_URL + path;
+      const defaults = { headers: { "Content-Type": "application/json" } };
+      const config = Object.assign({}, defaults, opts);
+
+      try {
+        const res = await fetch(url, config);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ct = res.headers.get("content-type") || "";
+        return ct.includes("application/json") ? res.json() : res.text();
+      } catch (e) {
+        console.error("API error:", e);
+        throw e;
+      }
+    }
+
+    // === UI логика ===
     function openModal(id) {
       document.getElementById(id).style.display = "flex";
       if (id === "statsModal") loadStats();
@@ -182,40 +121,65 @@
       document.getElementById(id).style.display = "none";
     }
 
+    // Бегущая строка
+    async function loadMarquee() {
+      try {
+        const text = await api("/marquee");
+        document.getElementById("marquee-text").innerText = typeof text === "string" ? text : (text.text || "—");
+      } catch (_) {}
+    }
+    setInterval(loadMarquee, 10000);
+    loadMarquee();
+
+    // Статистика
     async function loadStats() {
-      let tg = window.Telegram.WebApp;
-      let res = await fetch("http://localhost:5000/stats?user_id=" + tg.initDataUnsafe.user.id);
-      let data = await res.json();
-      document.getElementById("stats").innerHTML =
-        `💵 Баланс: ${data.balance}$<br>` +
-        `📱 Сдано номеров: ${data.total_numbers}<br>` +
-        `⏳ Минут отработано: ${data.total_minutes}`;
+      const userId = getUserId();
+      try {
+        const data = await api(`/stats?user_id=${encodeURIComponent(userId)}`);
+        document.getElementById("stats").innerHTML =
+          `💵 Баланс: ${data.balance}$<br>` +
+          `📱 Сдано номеров: ${data.total_numbers}<br>` +
+          `⏳ Минут отработано: ${data.total_minutes}`;
+        document.getElementById("balance").innerHTML = `💵 Баланс: <b>${data.balance}$</b>`;
+      } catch (e) {
+        document.getElementById("stats").innerText = "Не удалось загрузить статистику.";
+      }
     }
 
+    // Сдача номера
     async function submitNumber() {
-      let phone = document.getElementById("phoneInput").value.trim();
-      if (!phone.startsWith("+7") || phone.length < 12) {
+      const phoneEl = document.getElementById("phoneInput");
+      const phone = phoneEl.value.replace(/\s+/g, "");
+
+      if (!/^\+7\d{10}$/.test(phone)) {
         document.getElementById("submitStatus").innerText = "⚠ Введите номер в формате +7XXXXXXXXXX";
         return;
       }
-      let tg = window.Telegram.WebApp;
-      let res = await fetch("http://localhost:5000/submit_number", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({user_id: tg.initDataUnsafe.user.id, phone})
-      });
-      let data = await res.json();
-      document.getElementById("submitStatus").innerText = data.message;
+
+      const userId = getUserId();
+      try {
+        const data = await api("/submit_number", {
+          method: "POST",
+          body: JSON.stringify({ user_id: userId, phone })
+        });
+        document.getElementById("submitStatus").innerText = data.message || "Отправлено.";
+        phoneEl.value = "";
+      } catch (e) {
+        document.getElementById("submitStatus").innerText = "Ошибка отправки. Попробуйте позже.";
+      }
     }
 
+    // Мои номера
     async function loadNumbers() {
-      let tg = window.Telegram.WebApp;
-      let res = await fetch("http://localhost:5000/my_numbers?user_id=" + tg.initDataUnsafe.user.id);
-      let data = await res.json();
-      document.getElementById("myNumbers").innerHTML =
-        data.numbers.length ? data.numbers.join("<br>") : "Нет активных номеров";
+      const userId = getUserId();
+      try {
+        const data = await api(`/my_numbers?user_id=${encodeURIComponent(userId)}`);
+        const list = (data.numbers || []);
+        document.getElementById("myNumbers").innerHTML = list.length ? list.join("<br>") : "Нет активных номеров";
+      } catch (e) {
+        document.getElementById("myNumbers").innerText = "Не удалось загрузить номера.";
+      }
     }
   </script>
-
 </body>
 </html>
