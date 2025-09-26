@@ -19,7 +19,7 @@ function normApiBase(raw){
 }
 
 // Default API. Override with ?api= or window.API_BASE
-const API_BASE = normApiBase(qp.get("api") || window.API_BASE || "https://mytest.loca.lt");
+const API_BASE = normApiBase(qp.get("api") || window.API_BASE || "https://quaintly-pleasing-guinea.cloudpub.ru/");
 console.log("API_BASE =", API_BASE);
 
 // Global state
@@ -998,4 +998,5 @@ document.addEventListener("DOMContentLoaded", () => {
   bootstrap();
 
 });
+
 
